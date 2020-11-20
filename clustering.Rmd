@@ -14,24 +14,15 @@ db <- readxl::read_xlsx("DB Schema UPDATED.xlsx")
 #Function that normalizes numerical data for clustering
 minMax <- function(v){return((v-min(v))/(max(v)-min(v)))}
 
-#Function to check the bevType and update the columns (NEW BEVERAGE)
-bevTypeCheck = function(input_bevType){
-  #case_when() to update the new individual bevType columns
-  case_when(
-    input_bevType == "NEW AGE BEVERAGE" ~ 1,
-    input_bevType == "CRAFT BEER" ~ 1,
-    input_bevType == "IMPORT BEER" ~ 1,
-    input_bevType == "PREMIUM BEER" ~ 1,
-    input_bevType != "NEW AGE BEVERAGE" ~ 0
-  )
+frontlinePriceConvert_Existing_Data <- function(data){
+  formatted <- db%>%
+    select(NonNational)%>%
+    mutate(MMNonNational = minMax(NonNational))
+  return(formatted)
 }
 
-#Tests the function
-bevTypeCheck("CRAFT BEER")
-
-db2 <- add_row(db, `NEW AGE BEVERAGE` = bevTypeCheck("NEW AGE BEVERAGE"))
-
-
+dba <- frontlinePriceConvert_Existing_Data(db)
+  
 #Manually update BevType to 0-1 with associated columns
 test <- db%>%
   mutate(BevType2 = BevType)%>%
@@ -127,7 +118,7 @@ frequencyConvert_Existing_Data <- function(data){
 }
 
 #Testing the function and it works
-dba <- frequencyConvert_Existing_Data(dba)
+dba <- frequencyConvert_Existing_Data(db)
 
 kmeans(dba[,27:43], centers = 2)
 ```
