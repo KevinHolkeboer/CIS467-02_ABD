@@ -102,5 +102,42 @@ dba <- bevTypeConvert_Existing_Data(dba)
 dba <- packageConvert_Existing_Data(dba)
 
 
-kmeans(dba[,27:43], centers = 2)
+library(fpc)
+library(dbscan)
+if(!require(devtools)) install.packages("devtools")
+devtools::install_github("kassambara/factoextra")
+library(factoextra)
+
+new <- dba[, -c(1:6)]
+kNNdistplot(new, k=3)
+abline(h = 0.015, lty=2)
+
+set.seed(123)
+f <- dbscan::dbscan(new, 0.015, 10)
+new$CLUSTER=f$cluster
+
+library(naivebayes)
+
+new$CLUSTER <- as.factor(new$CLUSTER)
+
+ind <- sample(2, nrow(new), replace = T, prob = c(0.8, 0.2))
+train <- new[ind == 1,]
+test <- new[ind == 2,]
+
+model <- naive_bayes(CLUSTER ~ ., data = train)
+
+# Confusion Matrix - train data
+p1 <- predict(model, train)
+(tab1 <- table(p1, train$CLUSTER))
+1 - sum(diag(tab1)) / sum(tab1)
+
+# Confusion Matrix - test data
+p2 <- predict(model, test)
+(tab2 <- table(p2, test$CLUSTER))
+1 - sum(diag(tab2)) / sum(tab2)
+
+TestInstance <- readxl::read_xlsx("Test.xlsx")
+p3 <- predict(model, TestInstance)
+
+
 ```
