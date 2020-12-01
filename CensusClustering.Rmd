@@ -1,0 +1,139 @@
+---
+title: "Census Data Clustering ZIPs"
+author: "JR Morrish"
+date: "8/6/2020"
+---
+
+```{r packages, echo=FALSE, include=FALSE}
+# install.packages("tinytex")
+# library(tinytex)
+# tinytex::install_tinytex()
+library(ape)        # Hierarchical clustering
+library(cluster)    # Clustering algorithms
+library(clustertend)# Assess cluster tendency
+library(clv)        # Evaluate stability of clustering solution
+library(clValid)    # Evaluate stability of clustering solution
+library(dbscan)     # Clustering algorithms
+library(dendextend) # Modify graphs
+library(dplyr)      # Data manipulation
+library(factoextra) # Clustering algorithms & visualization
+library(fpc)        # Evaluate stability of clustering solution
+library(ggplot2)    # Create graphs
+library(gridExtra)  # Multiple cluster plots in grid
+#library(multiClust) # Data manipulation
+library(mvtnorm)    # For other packages
+library(mvoutlier)  # Identify multivariate outliers
+library(NbClust)    # Determine number of clusters
+library(outliers)   # Test for univariate outliers
+library(psych)      # Descriptive statistics
+library(pvclust)    # Compute cluster p-values
+library(readxl)     # Read in excel files
+library(Rtsne)      # Clustering mixed data
+library(tidyverse)  # Data manipulation
+library(openxlsx)   # Write excel files
+# library(ggstatsplot)
+# tinytex:::is_tinytex()
+```
+
+census <- readxl::read_xlsx("combined_data.xlsx", sheet = "Census")
+
+census <- na.omit(census)
+ef <- na.omit(census)
+
+census$ZIP_Pop_Density <- as.numeric(census$ZIP_Pop_Density)
+census$ZIP_med_income <- as.numeric(census$ZIP_med_income)
+census$ZIP_med_age <- as.numeric(census$ZIP_med_age)
+census$ZIP_P_Black <- as.numeric(census$ZIP_P_Black)
+census$ZIP_P_Asian <- as.numeric(census$ZIP_P_Asian)
+census$ZIP_P_Hispanic <- as.numeric(census$ZIP_P_Hispanic)
+
+#### Transformed Data
+```{r log transform data, echo=FALSE, include=FALSE}
+a <- min(census$ZIP_Pop_Density[census$ZIP_Pop_Density>0])-.0001
+g <- min(census$ZIP_P_Black[census$ZIP_P_Black>0])-.0001
+h <- min(census$ZIP_P_Asian[census$ZIP_P_Asian>0])-.0001
+i <- min(census$ZIP_P_Hispanic[census$ZIP_P_Hispanic>0])-.0001
+
+census %>%
+  mutate( 
+    pd.log = log(ifelse(ZIP_Pop_Density==0,a,ZIP_Pop_Density)),
+    pBl.log = log(ifelse(ZIP_P_Black==0,g,ZIP_P_Black)),
+    pAn.log = log(ifelse(ZIP_P_Asian==0,h,ZIP_P_Asian)),
+    pHL.log = log(ifelse(ZIP_P_Hispanic==0,i,ZIP_P_Hispanic))
+  ) -> census
+```
+
+```{r normalize data, echo=FALSE, include=FALSE}
+sccensus <- scale(census)
+
+sum(is.na(sccensus))
+# list rows of data that have missing values
+sccensus[!complete.cases(sccensus),]
+```
+
+```{r cluster data}
+sccensus <- census %>% 
+  dplyr::select(2:3, 7:10) %>% 
+  scale()
+
+set.seed(4323)
+
+sccensus %>%
+  dist() %>%
+  hclust() -> census.hclust
+
+# R16 <- ef %>%
+#   mutate(cluster = cutree(census.hclust,16))
+
+# as.phylo(census.hclust) -> hcc
+# plot(hcc,type="phylogram",cex=.5,label.offset=.1)
+# plot(hcc,type="unrooted", cex=0.2,label.offset=.1)
+fviz_dend(census.hclust, k = 16, rect = TRUE, rect_fill = TRUE, lwd = 0.5, cex = 0.5) # pop_dens, med_age, %s, med_inc
+# fviz_dend(census.hclust, k = 16, rect = TRUE, rect_fill = TRUE, xlim = c(0,100), ylim = c(0,8))
+# pdf("30.pdf")
+``` 
+
+```{r hierachical cuts}
+# R16 <- ef %>%
+#   mutate(cluster = cutree(census.hclust,3))
+R16 <- ef %>%
+ mutate(cluster = cutree(census.hclust3,16))
+
+# R30 <- ef %>%
+#  mutate(cluster = cutree(census.hclust3,30))
+```
+
+
+```{r export, echo=FALSE, include=FALSE, eval=FALSE}
+metrics <- list(
+  min  = ~min(.x, na.rm = TRUE), 
+  max  = ~max(.x, na.rm = TRUE),
+  mean = ~mean(.x, na.rm = TRUE),
+  sd   = ~sd(.x, na.rm = TRUE)
+)
+
+R16stats <- R16 %>%
+  group_by(cluster) %>%
+  summarise(
+    count = n(),
+    pctTot = count/nrow(R16),
+    across(9:26, metrics)) %>% 
+  select(cluster, count, pctTot,
+         Pop_Density_mean,
+         med_income_mean,
+         med_age_mean,
+         P_Black_mean,
+         P_Asian_mean,
+         P_Hispanic_mean)
+
+v3 <- createWorkbook()
+
+addWorksheet(v3,"Clusters")
+addWorksheet(v3,"STATS")
+
+writeData(v3, 1, R16)
+writeData(v3, 2, R16stats)
+
+saveWorkbook(v3, 
+             file="C:/Users/jr_morrish/Documents/Projects/Cluster Analysis/Customers/output/Census Clusters.xlsx", overwrite = TRUE)
+```
