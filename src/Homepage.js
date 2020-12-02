@@ -269,8 +269,11 @@ function Homepage() {
 
                                     axios.post(`http://localhost:3000/calculateExisting`, { data })
                                         .then(res => console.log(res.data))
+                                        .catch(error=>{
+                                            console.log(error);
+                                        })
+                                    }
                                 }
-                            }
 
                             }
                             >Calculate</Button>
