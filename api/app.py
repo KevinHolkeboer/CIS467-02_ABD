@@ -42,3 +42,31 @@ def login():
     
 
 
+from rpy2.robjects import r
+
+# Choosing a CRAN Mirror
+import rpy2.robjects.packages as rpackages
+utils = rpackages.importr('utils')
+utils.chooseCRANmirror(ind=1)
+
+from rpy2.robjects.vectors import StrVector
+packages = ("tidyverse", "naivebayes", "fpc", "dbscan", "tidymodels", "devtools")
+#Run this once to install the packages
+utils.install_packages(StrVector(packages))
+
+r('library(devtools)')
+#These packages get installed when updated and on initial run
+r('devtools::install_github("kassambara/factoextra")')
+r('devtools::install_github("mhahsler/dbscan")')
+
+#Load R libraries
+r('library(factoextra)')
+r('library(tidyverse, tidymodels)')
+r('library(naivebayes, dbscan)')
+
+#USE TO TEST BASIC R STUFF WORKS
+#r('print("Libraries installed and loaded")')
+#r('x <- rnorm(100)')
+#r('print(x)')
+#import rpy2
+#print(rpy2.__version__)
