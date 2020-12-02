@@ -64,7 +64,7 @@ r('library(factoextra)')
 r('library(tidyverse, tidymodels)')
 r('library(naivebayes, dbscan)')
 
-USE TO TEST BASIC R STUFF WORKS
+#USE TO TEST BASIC R STUFF WORKS
 r('print("Libraries installed and loaded")')
 r('x <- rnorm(100)')
 r('print(x)')
