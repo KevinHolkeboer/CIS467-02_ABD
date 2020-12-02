@@ -115,18 +115,15 @@ function Homepage() {
 
 
     const AttemptLogIn = (e) => {
-        console.log(loggedIn)
         const creds = {
             username: username,
             password: password,
         }
-        console.log(creds)
 
         axios.post(`http://localhost:3000/login`, { creds }).then(res => {
-            console.log(res.status)
             if (201 === res.status) {
                 setLoggedIn(true)
-            }else{
+            } else {
                 setFalseAttempt(true)
             }
         })
@@ -258,15 +255,19 @@ function Homepage() {
                                         FrontlinePrice,
                                         packSize,
                                     }
-                                    axios.get(`http://localhost:3000/calculateNew`, { data })
-                                        .then(res => console.log(res.data))
+                                    console.log(data);
+                                    axios.post(`http://localhost:3000/calculateNew`, { data })
+                                        .then(res => console.log(res))
+                                        .catch(error => {
+                                            console.log(error);
+                                        });
                                 }
                                 else if (value === 20) {
                                     const data = {
                                         ItemKey: currItem.itemKey
                                     }
 
-                                    axios.get(`http://localhost:3000/calculateExisting`, { data })
+                                    axios.post(`http://localhost:3000/calculateExisting`, { data })
                                         .then(res => console.log(res.data))
                                 }
                             }
@@ -309,7 +310,7 @@ function Homepage() {
                                 Log In
                             </Button>
                             {FalseAttempt === true &&
-                            <b>Incorrect Credentials! Contact System Admin if problem persists</b>
+                                <b>Incorrect Credentials! Contact System Admin if problem persists</b>
                             }
 
                         </Box>

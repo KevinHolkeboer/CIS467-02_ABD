@@ -20,15 +20,15 @@ def upload():
     return Product_Data_Json, 201
 
 
-@app.route('/calculateNew', methods = ['GET'])
+@app.route('/calculateNew', methods = ['POST'])
 def calculateNew():
-    ItemKey = request.get_json()
+    ItemKey = request.get_json(force=True)
     print(ItemKey,  file=sys.stderr)
     return ItemKey, 200
 
-@app.route('/calculateExisting', methods = ['GET'])
+@app.route('/calculateExisting', methods = ['POST'])
 def calculateExisting():
-    NewBev = request.get_json()
+    NewBev = request.get_json(force=True)
     print(NewBev,  file=sys.stderr)
     return NewBev, 200
 
@@ -64,9 +64,9 @@ r('library(factoextra)')
 r('library(tidyverse, tidymodels)')
 r('library(naivebayes, dbscan)')
 
-#USE TO TEST BASIC R STUFF WORKS
-#r('print("Libraries installed and loaded")')
-#r('x <- rnorm(100)')
-#r('print(x)')
-#import rpy2
-#print(rpy2.__version__)
+USE TO TEST BASIC R STUFF WORKS
+r('print("Libraries installed and loaded")')
+r('x <- rnorm(100)')
+r('print(x)')
+import rpy2
+print(rpy2.__version__)
