@@ -7,25 +7,30 @@ output: html_document
 
 ```{r}
 library(tidyverse)
+library(tidymodels)
 db <- readxl::read_xlsx("combined_data.xlsx", sheet = "Product")
 ```
 
 ```{r}
 #Function that normalizes numerical data for clustering
 minMax <- function(v){return((v-min(v))/(max(v)-min(v)))}
-
 frontlinePriceConvert <- function(data){
   formatted <- db%>%
     mutate(MMFrontlinePrice = minMax(FrontlinePrice))
   return(formatted)
 }
 
+db%>%
+  mutate(BevType = BeverageType)%>%
+  pivot_wider(names_from = "BevType", values_from="BevType")
+
 #Function that takes in a dataset (from the file that gets uploaded)
 #and converts the BevTypes to 0-1 in their respective columns 
+
 bevTypeConvert_Existing_Data <- function(data){
   formatted <- data%>%
   mutate(BevType = BeverageType)%>%
-  pivot_wider(names_from = "BevType", values_from="BevType", names_repair="unique")%>%
+  pivot_wider(names_from = "BevType", values_from="BevType")%>%
   mutate(
     "NEW AGE BEVERAGE" = ifelse(`NEW AGE BEVERAGE` %in% "NEW AGE BEVERAGE",1,0),
     "CRAFT BEER" = ifelse(`CRAFT BEER` %in% "CRAFT BEER",1,0),
@@ -93,14 +98,18 @@ packageConvert_Existing_Data <- function(data){
   return(formatted)
 }
 
-dba <- frontlinePriceConvert(db)
+rec <- 
+  recipe(~ FrontlinePrice + BeverageType + Package, data = db) %>% 
+  step_range(all_numeric()) %>% 
+  step_dummy(all_nominal()) %>%
+  prep()
+normalized <- juice(rec)
 
+dba <- frontlinePriceConvert(db)
 #Checking the function and it works
 dba <- bevTypeConvert_Existing_Data(dba)
-
 #Testing the function and it works
 dba <- packageConvert_Existing_Data(dba)
-
 
 library(fpc)
 library(dbscan)
@@ -109,35 +118,31 @@ devtools::install_github("kassambara/factoextra")
 library(factoextra)
 
 new <- dba[, -c(1:6)]
-kNNdistplot(new, k=3)
-abline(h = 0.015, lty=2)
-
+kNNdistplot(normalized, k=3)
+abline(h = 1.35, lty=2)
 set.seed(123)
-f <- dbscan::dbscan(new, 0.015, 10)
-new$CLUSTER=f$cluster
+f <- dbscan::dbscan(normalized, 1.35, 8)
+normalized$CLUSTER=f$cluster
 
 library(naivebayes)
 
-new$CLUSTER <- as.factor(new$CLUSTER)
+normalized$CLUSTER <- as.factor(normalized$CLUSTER)
+ind <- sample(2, nrow(normalized), replace = T, prob = c(0.8, 0.2))
 
-ind <- sample(2, nrow(new), replace = T, prob = c(0.8, 0.2))
-train <- new[ind == 1,]
-test <- new[ind == 2,]
-
+train <- normalized[ind == 1,]
+test <- normalized[ind == 2,]
 model <- naive_bayes(CLUSTER ~ ., data = train)
 
 # Confusion Matrix - train data
 p1 <- predict(model, train)
-(tab1 <- table(p1, train$CLUSTER))
+tab1 <- table(p1, train$CLUSTER)
 1 - sum(diag(tab1)) / sum(tab1)
 
 # Confusion Matrix - test data
 p2 <- predict(model, test)
-(tab2 <- table(p2, test$CLUSTER))
+tab2 <- table(p2, test$CLUSTER)
 1 - sum(diag(tab2)) / sum(tab2)
 
 TestInstance <- readxl::read_xlsx("Test.xlsx")
 p3 <- predict(model, TestInstance)
-
-
 ```

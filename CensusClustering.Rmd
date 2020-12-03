@@ -37,9 +37,6 @@ library(openxlsx)   # Write excel files
 
 census <- readxl::read_xlsx("combined_data.xlsx", sheet = "Census")
 
-census <- na.omit(census)
-ef <- na.omit(census)
-
 census$ZIP_Pop_Density <- as.numeric(census$ZIP_Pop_Density)
 census$ZIP_med_income <- as.numeric(census$ZIP_med_income)
 census$ZIP_med_age <- as.numeric(census$ZIP_med_age)
@@ -47,13 +44,16 @@ census$ZIP_P_Black <- as.numeric(census$ZIP_P_Black)
 census$ZIP_P_Asian <- as.numeric(census$ZIP_P_Asian)
 census$ZIP_P_Hispanic <- as.numeric(census$ZIP_P_Hispanic)
 
+census <- na.omit(census)
+
+ef <- census
+
 #### Transformed Data
 ```{r log transform data, echo=FALSE, include=FALSE}
 a <- min(census$ZIP_Pop_Density[census$ZIP_Pop_Density>0])-.0001
 g <- min(census$ZIP_P_Black[census$ZIP_P_Black>0])-.0001
 h <- min(census$ZIP_P_Asian[census$ZIP_P_Asian>0])-.0001
 i <- min(census$ZIP_P_Hispanic[census$ZIP_P_Hispanic>0])-.0001
-
 census %>%
   mutate( 
     pd.log = log(ifelse(ZIP_Pop_Density==0,a,ZIP_Pop_Density)),
@@ -65,7 +65,6 @@ census %>%
 
 ```{r normalize data, echo=FALSE, include=FALSE}
 sccensus <- scale(census)
-
 sum(is.na(sccensus))
 # list rows of data that have missing values
 sccensus[!complete.cases(sccensus),]
@@ -75,16 +74,12 @@ sccensus[!complete.cases(sccensus),]
 sccensus <- census %>% 
   dplyr::select(2:3, 7:10) %>% 
   scale()
-
 set.seed(4323)
-
 sccensus %>%
   dist() %>%
   hclust() -> census.hclust
-
 # R16 <- ef %>%
 #   mutate(cluster = cutree(census.hclust,16))
-
 # as.phylo(census.hclust) -> hcc
 # plot(hcc,type="phylogram",cex=.5,label.offset=.1)
 # plot(hcc,type="unrooted", cex=0.2,label.offset=.1)
@@ -97,43 +92,80 @@ fviz_dend(census.hclust, k = 16, rect = TRUE, rect_fill = TRUE, lwd = 0.5, cex =
 # R16 <- ef %>%
 #   mutate(cluster = cutree(census.hclust,3))
 R16 <- ef %>%
- mutate(cluster = cutree(census.hclust3,16))
-
+ mutate(cluster = cutree(census.hclust,16))
 # R30 <- ef %>%
 #  mutate(cluster = cutree(census.hclust3,30))
 ```
 
+# Get product from customer
+itemkey <- "83914"
 
-```{r export, echo=FALSE, include=FALSE, eval=FALSE}
-metrics <- list(
-  min  = ~min(.x, na.rm = TRUE), 
-  max  = ~max(.x, na.rm = TRUE),
-  mean = ~mean(.x, na.rm = TRUE),
-  sd   = ~sd(.x, na.rm = TRUE)
-)
+# Get customers that sell the specific product
+Customer_Product <- readxl::read_xlsx("combined_data.xlsx", sheet = "Customer-Product")
 
-R16stats <- R16 %>%
-  group_by(cluster) %>%
-  summarise(
-    count = n(),
-    pctTot = count/nrow(R16),
-    across(9:26, metrics)) %>% 
-  select(cluster, count, pctTot,
-         Pop_Density_mean,
-         med_income_mean,
-         med_age_mean,
-         P_Black_mean,
-         P_Asian_mean,
-         P_Hispanic_mean)
+soldItem <- subset(Customer_Product, ItemKey == itemkey)
+soldItem <- soldItem[order(soldItem$NetRevenue),]
 
-v3 <- createWorkbook()
+top10Percent = ceiling(nrow(soldItem) * 0.10)
 
-addWorksheet(v3,"Clusters")
-addWorksheet(v3,"STATS")
+topSellers <- head(soldItem, top10Percent)
 
-writeData(v3, 1, R16)
-writeData(v3, 2, R16stats)
+cusList <- topSellers[['CusKey']]
 
-saveWorkbook(v3, 
-             file="C:/Users/jr_morrish/Documents/Projects/Cluster Analysis/Customers/output/Census Clusters.xlsx", overwrite = TRUE)
-```
+# Get zip of customers and determine which cluster theze zips belong to.
+customers <- readxl::read_xlsx("combined_data.xlsx", sheet = "Customer")
+
+i = 1
+zipList <- character()
+for(ID in cusList) {
+  temp <- subset(customers, CusKey == cusList[i])
+  zipList <- c(zipList, as.character(temp[1, "ShipZip"]))
+  i = i + 1
+}
+
+getMode <- function(v) {
+  uniqv <- unique(v)
+  uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+
+BestZIP <- getMode(zipList)
+
+BestZIPCluster <- subset(R16, Clstzip == BestZIP)
+BestCluster <- as.character(BestZIPCluster[1, "cluster"])
+
+# Get zips from this cluster and get customers in those zips
+similarZones <- subset(R16, cluster == BestCluster)
+
+similarZips <- similarZones[['Clstzip']]
+
+i = 1
+similarCust <- vector()
+for(zips in similarZips) {
+  temp <- subset(customers, ShipZip == similarZips[i])
+  similarCust <- c(similarCust, temp["CusKey"])
+  i = i + 1
+}
+
+similarCust <- unlist(similarCust, recursive = FALSE)
+similarCust <- unname(similarCust)
+similarCust <- unique(similarCust)
+
+newCustomers <- vector()
+for (ID in similarCust) {
+  temp <- subset(Customer_Product, CusKey == ID & ItemKey == itemkey)
+  if (nrow(temp) == 0) {
+    newCustomers <- c(newCustomers, ID)
+  }
+}
+
+isFirst = TRUE
+for (ID in newCustomers) {
+  if (isFirst) {
+    FinalList <- subset(customers, CusKey == ID)
+    isFirst = FALSE
+  }
+  else {
+    temp <- subset(customers, CusKey == ID)
+    FinalList <- rbind(FinalList, temp)
+  }
+}
