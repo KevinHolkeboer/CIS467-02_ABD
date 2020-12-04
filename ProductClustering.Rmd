@@ -99,9 +99,9 @@ packageConvert_Existing_Data <- function(data){
 }
 
 rec <- 
-  recipe(~ FrontlinePrice + BeverageType + Package, data = db) %>% 
+  recipe(formula = ~ FrontlinePrice + BeverageType + Package, data = db) %>% 
   step_range(all_numeric()) %>% 
-  step_dummy(all_nominal()) %>%
+  step_dummy(all_nominal(), one_hot=T) %>%
   prep()
 normalized <- juice(rec)
 
