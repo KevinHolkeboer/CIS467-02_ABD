@@ -119,14 +119,14 @@ library(factoextra)
 
 new <- dba[, -c(1:6)]
 kNNdistplot(normalized, k=3)
-abline(h = 1.35, lty=2)
 set.seed(123)
-f <- dbscan::dbscan(normalized, 1.35, 8)
+f <- dbscan::dbscan(normalized, 1.35, 5)
 normalized$CLUSTER=f$cluster
 
 library(naivebayes)
 
 normalized$CLUSTER <- as.factor(normalized$CLUSTER)
+db$Cluster=normalized$CLUSTER
 ind <- sample(2, nrow(normalized), replace = T, prob = c(0.8, 0.2))
 
 train <- normalized[ind == 1,]
@@ -143,6 +143,111 @@ p2 <- predict(model, test)
 tab2 <- table(p2, test$CLUSTER)
 1 - sum(diag(tab2)) / sum(tab2)
 
-TestInstance <- readxl::read_xlsx("Test.xlsx")
-p3 <- predict(model, TestInstance)
+newPrice <- 750
+newBevType <- "IMPORT BEER"
+newSize <- "1 GALL (4)"
+
+# Compare product data to clusters and find nearest cluster. 
+newPrice <- (newPrice-min(db$FrontlinePrice))/(max(db$FrontlinePrice)-min(db$FrontlinePrice))
+
+newBevType <- str_replace_all(newBevType, " ", ".")
+newBevType <- paste("BeverageType_", newBevType, sep="")
+
+newSize <- str_replace_all(newSize, " ", ".")
+newSize <- str_replace_all(newSize, "/", ".")
+newSize <- str_replace_all(newSize, "\\(", ".")
+newSize <- str_replace_all(newSize, "\\)", ".")
+newSize <- paste("Package_X", newSize, sep="")
+
+newProduct <- vector(mode="numeric", length=ncol(normalized))
+
+newProduct[match("FrontlinePrice", names(normalized))] <- newPrice
+newProduct[match(newBevType, names(normalized))] <- 1
+newProduct[match(newSize, names(normalized))] <- 1
+
+newProduct <- as.data.frame(t(newProduct))
+colnames(newProduct) <- colnames(normalized[,1:ncol(normalized)-1])
+
+clusterPredict <- predict(model, newProduct)
+
+# Get which customers sell the beverages in this cluster
+
+inCluster <- subset(db, Cluster == clusterPredict)
+itemList <- inCluster[['ItemKey']]
+
+Customer_Product <- readxl::read_xlsx("combined_data.xlsx", sheet = "Customer-Product")
+
+i = 1
+custList <- vector()
+for(ID in itemList) {
+  temp <- subset(Customer_Product, ItemKey == itemList[i])
+  custList <- c(custList, temp["CusKey"])
+  i = i + 1
+}
+
+custList <- unlist(custList, recursive = FALSE)
+custList <- unname(custList)
+custList <- unique(custList)
+
+# Get table of customers that sold these items.
+
+isFirst = TRUE
+for (ID in itemList) {
+  if (isFirst) {
+    items <- subset(Customer_Product, ItemKey == ID)
+    isFirst = FALSE
+  }
+  else {
+    temp <- subset(Customer_Product, ItemKey == ID)
+    items <- rbind(items, temp)
+  }
+}
+
+isFirst = TRUE
+for (ID in custList) {
+  if (isFirst) {
+    itemSellers <- subset(items, CusKey == ID)
+    isFirst = FALSE
+  }
+  else {
+    temp <- subset(items, CusKey == ID)
+    itemSellers <- rbind(itemSellers, temp)
+  }
+}
+
+# For each customer, sum the Net Revenue of these beverages
+
+custList <- itemSellers[['CusKey']]
+custList <- unique(custList)
+
+custProfit <- vector()
+for (ID in custList) {
+  temp <- subset(itemSellers, CusKey == ID)
+  custProfit <- c(custProfit, sum(temp$NetRevenue))
+}
+
+customers <- readxl::read_xlsx("combined_data.xlsx", sheet = "Customer")
+
+isFirst = TRUE
+for (ID in custList) {
+  if (isFirst) {
+    newPrediction <- subset(customers, CusKey == ID)
+    isFirst = FALSE
+  }
+  else {
+    temp <- subset(customers, CusKey == ID)
+    newPrediction <- rbind(newPrediction, temp)
+  }
+}
+
+newPrediction $NetRevenue <- custProfit
+
+# Order by NetRevenue and get top 10%
+
+newPrediction  <- newPrediction [order(-newPrediction $NetRevenue),]
+
+top10Percent = ceiling(nrow(newPrediction ) * 0.10)
+
+newPrediction  <- head(newPrediction , top10Percent)
+
 ```

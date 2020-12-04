@@ -130,13 +130,13 @@ getMode <- function(v) {
 
 BestZIP <- getMode(zipList)
 
-BestZIPCluster <- subset(R16, Clstzip == BestZIP)
+BestZIPCluster <- subset(R16, ClstZIP == BestZIP)
 BestCluster <- as.character(BestZIPCluster[1, "cluster"])
 
 # Get zips from this cluster and get customers in those zips
 similarZones <- subset(R16, cluster == BestCluster)
 
-similarZips <- similarZones[['Clstzip']]
+similarZips <- similarZones[['ClstZIP']]
 
 i = 1
 similarCust <- vector()
@@ -161,11 +161,13 @@ for (ID in similarCust) {
 isFirst = TRUE
 for (ID in newCustomers) {
   if (isFirst) {
-    FinalList <- subset(customers, CusKey == ID)
+    oldPrediction  <- subset(customers, CusKey == ID)
     isFirst = FALSE
   }
   else {
     temp <- subset(customers, CusKey == ID)
-    FinalList <- rbind(FinalList, temp)
+    oldPrediction <- rbind(oldPrediction, temp)
   }
 }
+
+oldPrediction <- oldPrediction[order(-oldPrediction$NetRevenue),]
