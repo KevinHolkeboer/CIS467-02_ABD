@@ -1,7 +1,7 @@
 ---
-title: "clustering.Rmd"
+title: "ProductClustering.Rmd"
 author: "Zack Poorman, Justin Houstin"
-date: "11/13/2020"
+date: "12/6/2020"
 output: html_document
 ---
 
@@ -12,92 +12,6 @@ db <- readxl::read_xlsx("combined_data.xlsx", sheet = "Product")
 ```
 
 ```{r}
-#Function that normalizes numerical data for clustering
-minMax <- function(v){return((v-min(v))/(max(v)-min(v)))}
-frontlinePriceConvert <- function(data){
-  formatted <- db%>%
-    mutate(MMFrontlinePrice = minMax(FrontlinePrice))
-  return(formatted)
-}
-
-db%>%
-  mutate(BevType = BeverageType)%>%
-  pivot_wider(names_from = "BevType", values_from="BevType")
-
-#Function that takes in a dataset (from the file that gets uploaded)
-#and converts the BevTypes to 0-1 in their respective columns 
-
-bevTypeConvert_Existing_Data <- function(data){
-  formatted <- data%>%
-  mutate(BevType = BeverageType)%>%
-  pivot_wider(names_from = "BevType", values_from="BevType")%>%
-  mutate(
-    "NEW AGE BEVERAGE" = ifelse(`NEW AGE BEVERAGE` %in% "NEW AGE BEVERAGE",1,0),
-    "CRAFT BEER" = ifelse(`CRAFT BEER` %in% "CRAFT BEER",1,0),
-    "IMPORT BEER" = ifelse(`IMPORT BEER` %in% "IMPORT BEER",1,0),
-    "PREMIUM BEER" = ifelse(`PREMIUM BEER` %in% "PREMIUM BEER",1,0),
-    "WINE" = ifelse(`WINE` %in% "WINE",1,0),
-    "CIDER" = ifelse(`CIDER` %in% "CIDER",1,0),
-    "NON-ALCOHOL WINE" = ifelse(`NON-ALCOHOL WINE` %in% "NON-ALCOHOL WINE",1,0),
-    "CRAFTY BEER" = ifelse(`CRAFTY BEER` %in% "CRAFTY BEER",1,0),
-    "HARD SELTZER" = ifelse(`HARD SELTZER` %in% "HARD SELTZER",1,0),
-    "NON-ALCOHOL BEER" = ifelse(`NON-ALCOHOL BEER` %in% "NON-ALCOHOL BEER",1,0),
-    "FMB" = ifelse(`FMB` %in% "FMB",1,0),
-    "JUICES" = ifelse(`JUICES` %in% "JUICES",1,0),
-    "SPIRITS LOW PROOF" = ifelse(`SPIRITS LOW PROOF` %in% "SPIRITS LOW PROOF",1,0),
-    "SOFT DRINKS" = ifelse(`SOFT DRINKS` %in% "SOFT DRINKS",1,0),
-    "WATERS" = ifelse(`WATERS` %in% "WATERS",1,0),
-    "BELOW PREMIUM BEER" = ifelse(`BELOW PREMIUM BEER` %in% "BELOW PREMIUM BEER",1,0),
-    "MIXES" = ifelse(`MIXES` %in% "MIXES",1,0),
-    "HIGH GRAVITY BEER" = ifelse(`HIGH GRAVITY BEER` %in% "HIGH GRAVITY BEER",1,0),
-    "PREMIUM LIGHT BEER" = ifelse(`PREMIUM LIGHT BEER` %in% "PREMIUM LIGHT BEER",1,0),
-    "PREMIUM BEER" = ifelse(`PREMIUM BEER` %in% "PREMIUM BEER",1,0),
-    "ABOVE PREMIUM BEER" = ifelse(`ABOVE PREMIUM BEER` %in% "ABOVE PREMIUM BEER",1,0)
-  )
-  return(formatted)
-}
-
-#Function that takes in a dataset (from the file that gets uploaded)
-#and converts the Package to 0-1 in their respective columns
-packageConvert_Existing_Data <- function(data){
-  formatted <- data%>%
-  mutate(Package2 = Package)%>%
-  pivot_wider(names_from = "Package2", values_from="Package2", names_repair="unique")%>%
-  mutate(
-    "23.5OZ (24)" = ifelse(`23.5OZ (24)` %in% "23.5OZ (24)",1,0),
-    "20OZ (24)" = ifelse(`20OZ (24)` %in% "20OZ (24)",1,0),
-    "1/6BBL KEG" = ifelse(`1/6BBL KEG` %in% "1/6BBL KEG",1,0),
-    "12OZ BTL 4/6PK" = ifelse(`12OZ BTL 4/6PK` %in% "12OZ BTL 4/6PK",1,0),
-    "12OZ BTL 2/12PK" = ifelse(`12OZ BTL 2/12PK` %in% "12OZ BTL 2/12PK",1,0),
-    "12OZ CAN 4/6PK" = ifelse(`12OZ CAN 4/6PK` %in% "12OZ CAN 4/6PK",1,0),
-    "1/2BBL KEG" = ifelse(`1/2BBL KEG` %in% "1/2BBL KEG",1,0),
-    "13.2GL KEG" = ifelse(`13.2GL KEG` %in% "13.2GL KEG",1,0),
-    "16.9OZ (20)" = ifelse(`16.9OZ (20)` %in% "16.9OZ (20)",1,0),
-    "750ML (12)" = ifelse(`750ML (12)` %in% "750ML (12)",1,0),
-    "750ML (6)" = ifelse(`750ML (6)` %in% "750ML (6)",1,0),
-    "750ML (1)" = ifelse(`750ML (1)` %in% "750ML (1)",1,0),
-    "375ML (12)" = ifelse(`375ML (12)` %in% "375ML (12)",1,0),
-    "187ML (24)" = ifelse(`187ML (24)` %in% "187ML (24)",1,0),
-    "750ML (3)" = ifelse(`750ML (3)` %in% "750ML (3)",1,0),
-    "187ML 6/4PK" = ifelse(`187ML 6/4PK` %in% "187ML 6/4PK",1,0),
-    "11.2OZ BTL 6/4PK" = ifelse(`11.2OZ BTL 6/4PK` %in% "11.2OZ BTL 6/4PK",1,0),
-    "250ML 2/12PK" = ifelse(`250ML 2/12PK` %in% "250ML 2/12PK",1,0),
-    "16.9OZ (12)" = ifelse(`16.9OZ (12)` %in% "16.9OZ (12)",1,0),
-    "500ML (12)" = ifelse(`500ML (12)` %in% "500ML (12)",1,0),
-    "25.4OZ (12)" = ifelse(`25.4OZ (12)` %in% "25.4OZ (12)",1,0),
-    "11.2OZ (24)" = ifelse(`11.2OZ (24)` %in% "11.2OZ (24)",1,0),
-    "11.2OZ (12)" = ifelse(`11.2OZ (12)` %in% "11.2OZ (12)",1,0),
-    "25.4OZ (6)" = ifelse(`25.4OZ (6)` %in% "25.4OZ (6)",1,0),
-    "750ML 6/2PK" = ifelse(`750ML 6/2PK` %in% "750ML 6/2PK",1,0),
-    "1.5L (3)" = ifelse(`1.5L (3)` %in% "1.5L (3)",1,0),
-    "1.5L (6)" = ifelse(`1.5L (6)` %in% "1.5L (6)",1,0),
-    "3.0L (4)" = ifelse(`3.0L (4)` %in% "3.0L (4)",1,0),
-    "16.9OZ CAN 6/4PK" = ifelse(`16.9OZ CAN 6/4PK` %in% "16.9OZ CAN 6/4PK",1,0),
-    "11.2OZ BTL 4/6PK" = ifelse(`11.2OZ BTL 4/6PK` %in% "11.2OZ BTL 4/6PK",1,0)
-  )
-  return(formatted)
-}
-
 rec <- 
   recipe(formula = ~ FrontlinePrice + BeverageType + Package, data = db) %>% 
   step_range(all_numeric()) %>% 
@@ -105,26 +19,15 @@ rec <-
   prep()
 normalized <- juice(rec)
 
-dba <- frontlinePriceConvert(db)
-#Checking the function and it works
-dba <- bevTypeConvert_Existing_Data(dba)
-#Testing the function and it works
-dba <- packageConvert_Existing_Data(dba)
-
-library(fpc)
 library(dbscan)
 if(!require(devtools)) install.packages("devtools")
 devtools::install_github("kassambara/factoextra")
 library(factoextra)
+library(naivebayes)
 
-new <- dba[, -c(1:6)]
-kNNdistplot(normalized, k=3)
 set.seed(123)
 f <- dbscan::dbscan(normalized, 1.35, 5)
 normalized$CLUSTER=f$cluster
-
-library(naivebayes)
-
 normalized$CLUSTER <- as.factor(normalized$CLUSTER)
 db$Cluster=normalized$CLUSTER
 ind <- sample(2, nrow(normalized), replace = T, prob = c(0.8, 0.2))
