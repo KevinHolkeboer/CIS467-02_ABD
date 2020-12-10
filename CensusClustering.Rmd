@@ -5,9 +5,7 @@ date: "8/6/2020"
 ---
 
 ```{r packages, echo=FALSE, include=FALSE}
-# install.packages("tinytex")
-# library(tinytex)
-# tinytex::install_tinytex()
+# Install Libraries.
 library(ape)        # Hierarchical clustering
 library(cluster)    # Clustering algorithms
 library(clustertend)# Assess cluster tendency
@@ -20,7 +18,6 @@ library(factoextra) # Clustering algorithms & visualization
 library(fpc)        # Evaluate stability of clustering solution
 library(ggplot2)    # Create graphs
 library(gridExtra)  # Multiple cluster plots in grid
-#library(multiClust) # Data manipulation
 library(mvtnorm)    # For other packages
 library(mvoutlier)  # Identify multivariate outliers
 library(NbClust)    # Determine number of clusters
@@ -31,10 +28,10 @@ library(readxl)     # Read in excel files
 library(Rtsne)      # Clustering mixed data
 library(tidyverse)  # Data manipulation
 library(openxlsx)   # Write excel files
-# library(ggstatsplot)
-# tinytex:::is_tinytex()
 ```
 
+```{r}
+# Get Census data and update to numeric values.
 census <- readxl::read_xlsx("combined_data.xlsx", sheet = "Census")
 
 census$ZIP_Pop_Density <- as.numeric(census$ZIP_Pop_Density)
@@ -47,9 +44,10 @@ census$ZIP_P_Hispanic <- as.numeric(census$ZIP_P_Hispanic)
 census <- na.omit(census)
 
 ef <- census
+```
 
-#### Transformed Data
 ```{r log transform data, echo=FALSE, include=FALSE}
+# Transform data.
 a <- min(census$ZIP_Pop_Density[census$ZIP_Pop_Density>0])-.0001
 g <- min(census$ZIP_P_Black[census$ZIP_P_Black>0])-.0001
 h <- min(census$ZIP_P_Asian[census$ZIP_P_Asian>0])-.0001
@@ -64,13 +62,12 @@ census %>%
 ```
 
 ```{r normalize data, echo=FALSE, include=FALSE}
+# Normalize data.
 sccensus <- scale(census)
-sum(is.na(sccensus))
-# list rows of data that have missing values
-sccensus[!complete.cases(sccensus),]
 ```
 
 ```{r cluster data}
+# Hierarchical clustering.
 sccensus <- census %>% 
   dplyr::select(2:3, 7:10) %>% 
   scale()
@@ -78,32 +75,24 @@ set.seed(4323)
 sccensus %>%
   dist() %>%
   hclust() -> census.hclust
-# R16 <- ef %>%
-#   mutate(cluster = cutree(census.hclust,16))
-# as.phylo(census.hclust) -> hcc
-# plot(hcc,type="phylogram",cex=.5,label.offset=.1)
-# plot(hcc,type="unrooted", cex=0.2,label.offset=.1)
 fviz_dend(census.hclust, k = 16, rect = TRUE, rect_fill = TRUE, lwd = 0.5, cex = 0.5) # pop_dens, med_age, %s, med_inc
-# fviz_dend(census.hclust, k = 16, rect = TRUE, rect_fill = TRUE, xlim = c(0,100), ylim = c(0,8))
-# pdf("30.pdf")
 ``` 
 
 ```{r hierachical cuts}
-# R16 <- ef %>%
-#   mutate(cluster = cutree(census.hclust,3))
+# Hierarchical cuts.
 R16 <- ef %>%
  mutate(cluster = cutree(census.hclust,16))
-# R30 <- ef %>%
-#  mutate(cluster = cutree(census.hclust3,30))
 ```
-
-# Get product from customer
+```{r}
+# To be replaced with user input.
 itemkey <- "83914"
 
 # Get customers that sell the specific product
 Customer_Product <- readxl::read_xlsx("combined_data.xlsx", sheet = "Customer-Product")
 
 soldItem <- subset(Customer_Product, ItemKey == itemkey)
+
+# Narrow down to only top 10% of customers.
 soldItem <- soldItem[order(soldItem$NetRevenue),]
 
 top10Percent = ceiling(nrow(soldItem) * 0.10)
@@ -112,7 +101,7 @@ topSellers <- head(soldItem, top10Percent)
 
 cusList <- topSellers[['CusKey']]
 
-# Get zip of customers and determine which cluster theze zips belong to.
+# Get zip of customers.
 customers <- readxl::read_xlsx("combined_data.xlsx", sheet = "Customer")
 
 i = 1
@@ -123,6 +112,7 @@ for(ID in cusList) {
   i = i + 1
 }
 
+# Determine which cluster theze zips belong to.
 getMode <- function(v) {
   uniqv <- unique(v)
   uniqv[which.max(tabulate(match(v, uniqv)))]
@@ -133,11 +123,12 @@ BestZIP <- getMode(zipList)
 BestZIPCluster <- subset(R16, ClstZIP == BestZIP)
 BestCluster <- as.character(BestZIPCluster[1, "cluster"])
 
-# Get zips from this cluster and get customers in those zips
+# Get zips from this cluster.
 similarZones <- subset(R16, cluster == BestCluster)
 
 similarZips <- similarZones[['ClstZIP']]
 
+# Get customers in these zips. 
 i = 1
 similarCust <- vector()
 for(zips in similarZips) {
@@ -150,6 +141,7 @@ similarCust <- unlist(similarCust, recursive = FALSE)
 similarCust <- unname(similarCust)
 similarCust <- unique(similarCust)
 
+# Remove customers that already sell the product.
 newCustomers <- vector()
 for (ID in similarCust) {
   temp <- subset(Customer_Product, CusKey == ID & ItemKey == itemkey)
@@ -158,6 +150,7 @@ for (ID in similarCust) {
   }
 }
 
+# Build the final data frame. 
 isFirst = TRUE
 for (ID in newCustomers) {
   if (isFirst) {
@@ -170,4 +163,6 @@ for (ID in newCustomers) {
   }
 }
 
+# Order data frame by net revenue. 
 oldPrediction <- oldPrediction[order(-oldPrediction$NetRevenue),]
+```

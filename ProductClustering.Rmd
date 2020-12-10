@@ -6,12 +6,19 @@ output: html_document
 ---
 
 ```{r}
+# Install libraries.
 library(tidyverse)
 library(tidymodels)
-db <- readxl::read_xlsx("combined_data.xlsx", sheet = "Product")
+library(dbscan)
+if(!require(devtools)) install.packages("devtools")
+devtools::install_github("kassambara/factoextra")
+library(factoextra)
+library(naivebayes)
 ```
 
 ```{r}
+# Obtain product data and normalize.
+db <- readxl::read_xlsx("combined_data.xlsx", sheet = "Product")
 rec <- 
   recipe(formula = ~ FrontlinePrice + BeverageType + Package, data = db) %>% 
   step_range(all_numeric()) %>% 
@@ -19,38 +26,37 @@ rec <-
   prep()
 normalized <- juice(rec)
 
-library(dbscan)
-if(!require(devtools)) install.packages("devtools")
-devtools::install_github("kassambara/factoextra")
-library(factoextra)
-library(naivebayes)
-
+# Cluster data and signify clusters.
 set.seed(123)
 f <- dbscan::dbscan(normalized, 1.35, 5)
 normalized$CLUSTER=f$cluster
 normalized$CLUSTER <- as.factor(normalized$CLUSTER)
 db$Cluster=normalized$CLUSTER
-ind <- sample(2, nrow(normalized), replace = T, prob = c(0.8, 0.2))
 
+# Separate train and test data. 
+ind <- sample(2, nrow(normalized), replace = T, prob = c(0.8, 0.2))
 train <- normalized[ind == 1,]
 test <- normalized[ind == 2,]
+
+# Train naive bayes model.
 model <- naive_bayes(CLUSTER ~ ., data = train)
 
-# Confusion Matrix - train data
+# Confusion Matrix - train data.
 p1 <- predict(model, train)
 tab1 <- table(p1, train$CLUSTER)
 1 - sum(diag(tab1)) / sum(tab1)
 
-# Confusion Matrix - test data
+# Confusion Matrix - test data.
 p2 <- predict(model, test)
 tab2 <- table(p2, test$CLUSTER)
 1 - sum(diag(tab2)) / sum(tab2)
 
+# To Replace with User Input.
 newPrice <- 750
 newBevType <- "IMPORT BEER"
 newSize <- "1 GALL (4)"
 
-# Compare product data to clusters and find nearest cluster. 
+# Normalize user input.
 newPrice <- (newPrice-min(db$FrontlinePrice))/(max(db$FrontlinePrice)-min(db$FrontlinePrice))
 
 newBevType <- str_replace_all(newBevType, " ", ".")
@@ -68,16 +74,18 @@ newProduct[match("FrontlinePrice", names(normalized))] <- newPrice
 newProduct[match(newBevType, names(normalized))] <- 1
 newProduct[match(newSize, names(normalized))] <- 1
 
+# Form data frame for normalized user input.
 newProduct <- as.data.frame(t(newProduct))
 colnames(newProduct) <- colnames(normalized[,1:ncol(normalized)-1])
 
+# Use Naive Bayes model to predict cluster.
 clusterPredict <- predict(model, newProduct)
 
-# Get which customers sell the beverages in this cluster
-
+# Get all items within the predicted cluster.
 inCluster <- subset(db, Cluster == clusterPredict)
 itemList <- inCluster[['ItemKey']]
 
+# Get list of customers that sell items within the predicted cluster.
 Customer_Product <- readxl::read_xlsx("combined_data.xlsx", sheet = "Customer-Product")
 
 i = 1
@@ -93,7 +101,6 @@ custList <- unname(custList)
 custList <- unique(custList)
 
 # Get table of customers that sold these items.
-
 isFirst = TRUE
 for (ID in itemList) {
   if (isFirst) {
@@ -118,17 +125,18 @@ for (ID in custList) {
   }
 }
 
-# For each customer, sum the Net Revenue of these beverages
-
+# Get updated customer list.
 custList <- itemSellers[['CusKey']]
 custList <- unique(custList)
 
+# For each customer get the net revenue of all cluster items sold by specific customer.
 custProfit <- vector()
 for (ID in custList) {
   temp <- subset(itemSellers, CusKey == ID)
   custProfit <- c(custProfit, sum(temp$NetRevenue))
 }
 
+# Get table of these customers.
 customers <- readxl::read_xlsx("combined_data.xlsx", sheet = "Customer")
 
 isFirst = TRUE
@@ -143,10 +151,10 @@ for (ID in custList) {
   }
 }
 
-newPrediction $NetRevenue <- custProfit
+# Replace NetRevenue column (originally total customer revenue) with new NetRevenue(NetRevenue of customer sales on cluster items).
+newPrediction$NetRevenue <- custProfit
 
 # Order by NetRevenue and get top 10%
-
 newPrediction  <- newPrediction [order(-newPrediction $NetRevenue),]
 
 top10Percent = ceiling(nrow(newPrediction ) * 0.10)
