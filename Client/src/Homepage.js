@@ -105,10 +105,15 @@ function Homepage() {
         e.preventDefault();
         const form = new FormData();
         form.append('file', e.target.files[0]);
+        let config = {
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+            }
+          }
 
 
 
-        axios.post(`http://localhost:3000/upload`, form).then(res => {
+        axios.post(`http://brandapp.alliancebeverage.com:80/upload`, form, config).then(res => {
             fillFields(res.data)
         })
     };
@@ -119,13 +124,19 @@ function Homepage() {
             username: username,
             password: password,
         }
-
-        axios.post(`http://localhost:3000/login`, { creds }).then(res => {
+        let config = {
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+            }
+          }
+        axios.post(`http://brandapp.alliancebeverage.com:80/login`, { creds }, config).then(res => {
             if (201 === res.status) {
                 setLoggedIn(true)
             } else {
                 setFalseAttempt(true)
             }
+        }).catch(error=>{
+            console.log(error);
         })
 
     }
@@ -256,7 +267,7 @@ function Homepage() {
                                         packSize,
                                     }
                                     console.log(data);
-                                    axios.post(`http://localhost:3000/calculateNew`, { data })
+                                    axios.post(`http://brandapp.alliancebeverage.com:80/calculateNew`, { data })
                                         .then(res => console.log(res))
                                         .catch(error => {
                                             console.log(error);
@@ -267,7 +278,7 @@ function Homepage() {
                                         ItemKey: currItem.itemKey
                                     }
 
-                                    axios.post(`http://localhost:3000/calculateExisting`, { data })
+                                    axios.post(`http://brandapp.alliancebeverage.com:80/calculateExisting`, { data })
                                         .then(res => console.log(res.data))
                                         .catch(error=>{
                                             console.log(error);

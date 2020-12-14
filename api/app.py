@@ -1,13 +1,19 @@
 import os
+import xlrd
 import pandas
-from flask import Flask, flash, request, redirect, url_for, send_from_directory
+from flask import Flask, flash, request, redirect, url_for, send_from_directory, jsonify
+from flask_cors import CORS
 import sys
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 UPLOAD_FOLDER = basedir + '/ExcelFiles'
-
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+cors = CORS(app)
+@app.route('/test', methods = ['POST'])
+def test():
+    print("hello from API")
+    return ('', 200)
 
 
 @app.route('/upload', methods = ['POST'])
@@ -18,9 +24,11 @@ def upload():
 
     #file.save(os.path.join(app.config['UPLOAD_FOLDER'], file.filename))
     return Product_Data_Json, 201
+    
 
 
 @app.route('/calculateNew', methods = ['POST'])
+
 def calculateNew():
     ItemKey = request.get_json(force=True)
     print(ItemKey,  file=sys.stderr)
@@ -36,37 +44,37 @@ def calculateExisting():
 def login():
     creds = request.get_json(force=True)
     if(creds['creds']['username'] == "sd" and creds['creds']['username']  == "sd"):
-        return ('', 201)   
+        return ("", 201)   
     else:
-        return ('', 200)
+        return ("", 200)
     
 
 
-from rpy2.robjects import r
+# from rpy2.robjects import r
 
-# Choosing a CRAN Mirror
-import rpy2.robjects.packages as rpackages
-utils = rpackages.importr('utils')
-utils.chooseCRANmirror(ind=1)
+# # Choosing a CRAN Mirror
+# import rpy2.robjects.packages as rpackages
+# utils = rpackages.importr('utils')
+# utils.chooseCRANmirror(ind=1)
 
-from rpy2.robjects.vectors import StrVector
-packages = ("tidyverse", "naivebayes", "fpc", "dbscan", "tidymodels", "devtools")
-#Run this once to install the packages
-utils.install_packages(StrVector(packages))
+# from rpy2.robjects.vectors import StrVector
+# packages = ("tidyverse", "naivebayes", "fpc", "dbscan", "tidymodels", "devtools")
+# #Run this once to install the packages
+# utils.install_packages(StrVector(packages))
 
-r('library(devtools)')
-#These packages get installed when updated and on initial run
-r('devtools::install_github("kassambara/factoextra")')
-r('devtools::install_github("mhahsler/dbscan")')
+# r('library(devtools)')
+# #These packages get installed when updated and on initial run
+# r('devtools::install_github("kassambara/factoextra")')
+# r('devtools::install_github("mhahsler/dbscan")')
 
-#Load R libraries
-r('library(factoextra)')
-r('library(tidyverse, tidymodels)')
-r('library(naivebayes, dbscan)')
+# #Load R libraries
+# r('library(factoextra)')
+# r('library(tidyverse, tidymodels)')
+# r('library(naivebayes, dbscan)')
 
-#USE TO TEST BASIC R STUFF WORKS
-r('print("Libraries installed and loaded")')
-r('x <- rnorm(100)')
-r('print(x)')
-import rpy2
-print(rpy2.__version__)
+# #USE TO TEST BASIC R STUFF WORKS
+# r('print("Libraries installed and loaded")')
+# r('x <- rnorm(100)')
+# r('print(x)')
+# import rpy2
+# print(rpy2.__version__)
