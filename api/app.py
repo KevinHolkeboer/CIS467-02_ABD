@@ -1,7 +1,7 @@
 import os
 import xlrd
 import pandas
-from flask import Flask, flash, request, redirect, url_for, send_from_directory, jsonify
+from flask import Flask, flash, request, redirect, url_for, send_from_directory, jsonify, send_from_directory
 from flask_cors import CORS
 import sys
 
@@ -9,8 +9,10 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 UPLOAD_FOLDER = basedir + '/ExcelFiles'
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
 app.config['CORS_ORIGINS'] = ['https://brandapp.alliancebeverage.com']
 cors = CORS(app)
+
 @app.route('/test', methods = ['POST'])
 def test():
     print("hello from API")
@@ -20,10 +22,10 @@ def test():
 @app.route('/upload', methods = ['POST'])
 def upload():
     file = request.files['file']
+    file.save(os.path.join(app.config['UPLOAD_FOLDER'], file.filename))
     product_Data= pandas.read_excel(file, sheet_name='Product')
     Product_Data_Json = product_Data.to_json(orient='records')
 
-    #file.save(os.path.join(app.config['UPLOAD_FOLDER'], file.filename))
     return Product_Data_Json, 201
     
 
@@ -33,13 +35,20 @@ def upload():
 def calculateNew():
     ItemKey = request.get_json(force=True)
     print(ItemKey,  file=sys.stderr)
+    request
     return ItemKey, 200
 
 @app.route('/calculateExisting', methods = ['POST'])
 def calculateExisting():
     NewBev = request.get_json(force=True)
     print(NewBev,  file=sys.stderr)
-    return NewBev, 200
+    try:
+        return send_from_directory(UPLOAD_FOLDER, "combined_data_test.xlsx", as_attachment=True)
+    except:
+        return ("oops", 404)
+
+
+
 
 @app.route('/login', methods = ['POST'])
 def login():

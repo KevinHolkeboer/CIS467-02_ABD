@@ -54,6 +54,7 @@ function Homepage() {
     }));
     const classes = useStyles();
     const [value, setValue] = React.useState('');
+    const [loaded, setLoaded] = React.useState(false);
 
 
     const handleChangeItem = (event) => {
@@ -92,6 +93,7 @@ function Homepage() {
         setBevTypes(bt)
         const ps = [...new Set(packSizes)]
         setPackSizes(ps)
+        setLoaded(true)
         console.log(currItems)
         console.log(packSizes)
         console.log(bevTypes)
@@ -109,7 +111,7 @@ function Homepage() {
             headers: {
                 "Access-Control-Allow-Origin": "*",
             }
-          }
+        }
 
 
 
@@ -128,14 +130,14 @@ function Homepage() {
             headers: {
                 "Access-Control-Allow-Origin": "*",
             }
-          }
+        }
         axios.post(`http://brandapp.alliancebeverage.com:80/login`, { creds }, config).then(res => {
             if (201 === res.status) {
                 setLoggedIn(true)
             } else {
                 setFalseAttempt(true)
             }
-        }).catch(error=>{
+        }).catch(error => {
             console.log(error);
         })
 
@@ -149,8 +151,8 @@ function Homepage() {
                 <div>
                     <Box display="flex" alignItems="center" justifyContent="space-between" margin="25px">
                         <h1>Alliance Beverage Distributing</h1>
-                        <Button variant="outlined" onClick={async () => {setLoggedIn(false)}}>
-                        Log out</Button>
+                        <Button variant="outlined" onClick={async () => { setLoggedIn(false) }}>
+                            Log out</Button>
 
                     </Box>
                     <div className="App">
@@ -169,138 +171,159 @@ function Homepage() {
                         <label htmlFor="contained-button-file">
                             <Button variant="contained" component="span">
                                 Upload
-                    </Button>
+                            </Button>
                         </label>
-                        <div>
-                            <FormControl className={classes.formControl}>
-                                <InputLabel id="demo-simple-select-label">Is this is a new or existing product?</InputLabel>
-                                <Select
-                                    labelId="demo-simple-select-label"
-                                    id="demo-simple-select"
-                                    value={value}
-                                    onChange={handleChangeItem}
-                                >
-                                    <MenuItem value={10}>New Item</MenuItem>
-                                    <MenuItem value={20}>Existing Item</MenuItem>
-                                </Select>
-                            </FormControl>
-                        </div>
-                        {value === 10 &&
-                            <Box flexDirection="column" display="flex" alignItems="center" >
-                                <h3>New Product</h3>
-                                <FormControl className={classes.formControl}>
-                                    <InputLabel shrink id="demo-simple-select-placeholder-label-label">
-                                        Beverage Type
-                            </InputLabel>
-                                    <Select
-                                        labelId="demo-simple-select-placeholder-label-label"
-                                        id="demo-simple-select-placeholder-label"
-                                        value={bevType}
-                                        onChange={handleChangeBev}
-                                        input={<Input />}
-                                    >
-                                        {bevTypes.map((bevType, id) => (
-                                            <MenuItem key={id} value={bevType}>
-                                                {bevType}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-                                <FormControl className={classes.formControl}>
-                                    <TextField
-                                        onChange={handleChangeFLP}
-                                        id="standard-number"
-                                        label="Frontline Price (in US Dollars)"
-                                        value={FrontlinePrice}
-                                        type="number"
-                                        InputLabelProps={{
-                                            shrink: true,
-                                        }}
-                                    />
-                                </FormControl>
-                                <FormControl className={classes.formControl}>
-                                    <InputLabel shrink id="demo-simple-select-placeholder-label-label">
-                                        Package Size
-                            </InputLabel>
-                                    <Select
-                                        labelId="demo-simple-select-placeholder-label-label"
-                                        id="demo-simple-select-placeholder-label"
-                                        value={packSize}
-                                        onChange={handleChangePack}
-                                    >
-                                        {packSizes.map((packSize, id) => (
-                                            <MenuItem key={id} value={packSize}>
-                                                {packSize}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-                            </Box>
-                        }
-                        {value === 20 &&
-                            <Box flexDirection="column" display="flex" alignItems="center" >
-                                <h3>Existing Product</h3>
-                                <FormControl className={classes.formControl}>
-                                    <InputLabel shrink id="demo-simple-select-placeholder-label-label">
-                                        Item Name
-                            </InputLabel>
-                                    <Autocomplete
-                                        filterOptions={filterOptions}
-                                        id="clear-on-escape"
-                                        clearOnEscape
-                                        value={currItem}
-                                        onChange={handleChangeCurrItem}
-                                        getOptionLabel={option => option.name}
-                                        options={currItems}
-                                        style={{ width: 300 }}
-                                        renderInput={(params) => <TextField {...params} label="Existing Product" margin="normal" />}
-                                    />
-
-                                </FormControl>
-                            </Box>
-                        }
-                        {(value === 10 || value === 20) &&
-                            <Button variant="outlined" onClick={async () => {
-                                if (value === 10) {
-                                    const data = {
-                                        bevType,
-                                        FrontlinePrice,
-                                        packSize,
-                                    }
-                                    let config = {
-                                        headers: {
-                                            "Access-Control-Allow-Origin": "*",
-                                        }
-                                      }
-                                    axios.post(`http://brandapp.alliancebeverage.com:80/calculateNew`, { data }, config)
-                                        .then(res => console.log(res))
-                                        .catch(error => {
-                                            console.log(error);
-                                        });
+                        {loaded === true &&
+                            <div>
+                                <div>
+                                    <FormControl className={classes.formControl}>
+                                        <InputLabel id="demo-simple-select-label">Is this is a new or existing product?</InputLabel>
+                                        <Select
+                                            labelId="demo-simple-select-label"
+                                            id="demo-simple-select"
+                                            value={value}
+                                            onChange={handleChangeItem}
+                                        >
+                                            <MenuItem value={10}>New Item</MenuItem>
+                                            <MenuItem value={20}>Existing Item</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                </div>
+                                {value === 10 &&
+                                    <Box flexDirection="column" display="flex" alignItems="center" >
+                                        <h3>New Product</h3>
+                                        <FormControl className={classes.formControl}>
+                                            <InputLabel shrink id="demo-simple-select-placeholder-label-label">
+                                                Beverage Type
+                                            </InputLabel>
+                                            <Select
+                                                labelId="demo-simple-select-placeholder-label-label"
+                                                id="demo-simple-select-placeholder-label"
+                                                value={bevType}
+                                                onChange={handleChangeBev}
+                                                input={<Input />}
+                                            >
+                                                {bevTypes.map((bevType, id) => (
+                                                    <MenuItem key={id} value={bevType}>
+                                                        {bevType}
+                                                    </MenuItem>
+                                                ))}
+                                            </Select>
+                                        </FormControl>
+                                        <FormControl className={classes.formControl}>
+                                            <TextField
+                                                onChange={handleChangeFLP}
+                                                id="standard-number"
+                                                label="Frontline Price (in US Dollars)"
+                                                value={FrontlinePrice}
+                                                type="number"
+                                                InputLabelProps={{
+                                                    shrink: true,
+                                                }}
+                                            />
+                                        </FormControl>
+                                        <FormControl className={classes.formControl}>
+                                            <InputLabel shrink id="demo-simple-select-placeholder-label-label">
+                                                Package Size
+                                        </InputLabel>
+                                            <Select
+                                                labelId="demo-simple-select-placeholder-label-label"
+                                                id="demo-simple-select-placeholder-label"
+                                                value={packSize}
+                                                onChange={handleChangePack}
+                                            >
+                                                {packSizes.map((packSize, id) => (
+                                                    <MenuItem key={id} value={packSize}>
+                                                        {packSize}
+                                                    </MenuItem>
+                                                ))}
+                                            </Select>
+                                        </FormControl>
+                                    </Box>
                                 }
-                                else if (value === 20) {
-                                    const data = {
-                                        ItemKey: currItem.itemKey
-                                    }
-                                    let config = {
-                                        headers: {
-                                            "Access-Control-Allow-Origin": "*",
-                                        }
-                                      }
+                                {value === 20 &&
+                                    <Box flexDirection="column" display="flex" alignItems="center" >
+                                        <h3>Existing Product</h3>
+                                        <FormControl className={classes.formControl}>
+                                            <InputLabel shrink id="demo-simple-select-placeholder-label-label">
+                                                Item Name
+                                            </InputLabel>
+                                            <Autocomplete
+                                                filterOptions={filterOptions}
+                                                id="clear-on-escape"
+                                                clearOnEscape
+                                                value={currItem}
+                                                onChange={handleChangeCurrItem}
+                                                getOptionLabel={option => option.name}
+                                                options={currItems}
+                                                style={{ width: 300 }}
+                                                renderInput={(params) => <TextField {...params} label="Existing Product" margin="normal" />}
+                                            />
 
-                                    axios.post(`http://brandapp.alliancebeverage.com:80/calculateExisting`, { data }, config)
-                                        .then(res => console.log(res.data))
-                                        .catch(error=>{
-                                            console.log(error);
-                                        })
-                                    }
+                                        </FormControl>
+                                    </Box>
                                 }
+                                {(value === 10 || value === 20) &&
+                                    <Button variant="outlined" onClick={async () => {
+                                        if (value === 10) {
+                                            const data = {
+                                                bevType,
+                                                FrontlinePrice,
+                                                packSize,
+                                            }
+                                            let config = {
+                                                headers: {
+                                                    "Access-Control-Allow-Origin": "*",
+                                                }
+                                            }
+                                            axios.post(`http://brandapp.alliancebeverage.com:80/calculateNew`, { data }, config)
+                                                .then(res => console.log(res))
+                                                .catch(error => {
+                                                    console.log(error);
+                                                });
+                                        }
+                                        else if (value === 20) {
+                                            const data = {
+                                                ItemKey: currItem.itemKey
+                                            }
+                                            let config = {
+                                                headers: {
+                                                    "Access-Control-Allow-Origin": "*",
+                                                }
+                                            }
 
-                            }
-                            >Calculate</Button>
+                                            axios({
+                                                method: "post",
+                                                url: `http://brandapp.alliancebeverage.com:80/calculateExisting`,
+                                                data: data,
+                                                headers: {
+                                                    "Access-Control-Allow-Origin": "*",
+                                                },
+                                                responseType: 'arraybuffer',
+                                            })
+                                                .then((response) => {
+                                                    const url = window.URL.createObjectURL(new Blob([response.data]));
+                                                    const link = document.createElement('a');
+                                                    link.href = url;
+                                                    link.setAttribute('download', 'file.xlsx'); //or any other extension
+                                                    document.body.appendChild(link);
+                                                    link.click();
+                                                })
+                                                .catch(error => {
+                                                    console.log(error);
+                                                })
+                                        }
+                                    }
 
+                                    }
+                                    >Calculate</Button>
+
+                                }
+                            </div>
                         }
+
                     </div>
+
                 </div>
             }
             {loggedIn === false &&
