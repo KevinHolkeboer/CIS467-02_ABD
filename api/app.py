@@ -9,6 +9,7 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 UPLOAD_FOLDER = basedir + '/ExcelFiles'
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['CORS_ORIGINS'] = ['https://brandapp.alliancebeverage.com']
 cors = CORS(app)
 @app.route('/test', methods = ['POST'])
 def test():
@@ -50,9 +51,9 @@ def login():
     
 
 
-# from rpy2.robjects import r
+from rpy2.robjects import r
 
-# # Choosing a CRAN Mirror
+# Choosing a CRAN Mirror
 # import rpy2.robjects.packages as rpackages
 # utils = rpackages.importr('utils')
 # utils.chooseCRANmirror(ind=1)
@@ -72,9 +73,9 @@ def login():
 # r('library(tidyverse, tidymodels)')
 # r('library(naivebayes, dbscan)')
 
-# #USE TO TEST BASIC R STUFF WORKS
-# r('print("Libraries installed and loaded")')
-# r('x <- rnorm(100)')
-# r('print(x)')
-# import rpy2
-# print(rpy2.__version__)
+#USE TO TEST BASIC R STUFF WORKS
+r('print("Libraries installed and loaded")')
+r('x <- rnorm(100)')
+r('print(x)')
+import rpy2
+print(rpy2.__version__)
