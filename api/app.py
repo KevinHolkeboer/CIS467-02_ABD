@@ -91,6 +91,18 @@ r('print(x)')
 
 #import rpy2.robjects as robjects
 
+#Read files into R
+#r(db <- readxl::read_xlsx("combined_data.xlsx", sheet="Product"))
+#r(census <- readxl::read_xlsx("combined_data.xlsx", sheet = "Census"))
+
+#Check the column names to ensure all columns exist
+"""r(```
+   if(!(colnames(db) %in% c("ItemKey", "ItemName", "BeverageType", "Package", "PackName", "FrontlinePrice")) |
+   !(colnames(census) %in% c("ClstZIP", "ZIP_Pop_Density", "ZIP_med_income", "ZIP_med_age", "ZIP_P_Black", "ZIP_P_Asian", "ZIP_P_Hispanic"))){
+     #SEND ERROR TO FRONTEND SOMEHOW!!!!!
+   }
+"""
+
 """ if(NEW BEVERAGE){
 # Obtain product data and normalize
 r('''
