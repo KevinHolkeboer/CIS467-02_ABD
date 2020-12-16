@@ -105,14 +105,6 @@ library(tidyverse)
 library(tidymodels)
 ''')
 
-#USE TO TEST BASIC R STUFF WORKS
-r('print("Libraries installed and loaded")')
-r('x <- rnorm(100)')
-r('print(x)')
-#r('wd <- print(getwd())')
-
-#import rpy2.robjects as robjects
-
 #Read files into R
 r('db <- readxl::read_xlsx("/Users/zack/Desktop/CIS467-02_ABD/api/ExcelFiles/uploadData.xlsx", sheet="Product")')
 r('census <- readxl::read_xlsx("/Users/zack/Desktop/CIS467-02_ABD/api/ExcelFiles/uploadData.xlsx", sheet = "Census")')
@@ -124,333 +116,338 @@ r('census <- readxl::read_xlsx("/Users/zack/Desktop/CIS467-02_ABD/api/ExcelFiles
      #SEND ERROR TO FRONTEND SOMEHOW!!!!!
    }
 """
+import rpy2.robjects as robjects
 
-""" if(NEW BEVERAGE){
-# Obtain product data and normalize
-r('''
-  rec <- 
-  recipe(formula = ~ FrontlinePrice + BeverageType + Package, data = db) %>% 
-  step_range(all_numeric()) %>% 
-  step_dummy(all_nominal(), one_hot=T) %>%
-  prep()
-  normalized <- juice(rec)
+def calculateNewR(beverageType, frontlinePrice, packageSize):
+  robjecs.r('beverageType=fetch("%s")') % (beverageType)
+  robjecs.r('frontlinePrice=fetch("%s")') % (frontlinePrice)
+  robjecs.r('packageSize=fetch("%s")') % (packageSize)
+
+  # Obtain product data and normalize
+  r('''
+    rec <- 
+    recipe(formula = ~ FrontlinePrice + BeverageType + Package, data = db) %>% 
+    step_range(all_numeric()) %>% 
+    step_dummy(all_nominal(), one_hot=T) %>%
+    prep()
+    normalized <- juice(rec)
   ''')
 
-# Cluster data and signify clusters
-r('''
-set.seed(123)
-f <- dbscan::dbscan(normalized, 1.35, 5)
-normalized$CLUSTER=f$cluster
-normalized$CLUSTER <- as.factor(normalized$CLUSTER)
-db$Cluster=normalized$CLUSTER
-''')
+  # Cluster data and signify clusters
+  r('''
+  set.seed(123)
+  f  <- dbscan::dbscan(normalized, 1.35, 5)
+  normalized$CLUSTER=f$cluster
+  normalized$CLUSTER <- as.factor(normalized$CLUSTER)
+  db$Cluster=normalized$CLUSTER
+  ''')
 
-# Separate train and test data 
-r('''
-ind <- sample(2, nrow(normalized), replace = T, prob = c(0.8, 0.2))
-train <- normalized[ind == 1,]
-test <- normalized[ind == 2,]
-''')
+  # Separate train and test data 
+  r('''
+  ind <- sample(2, nrow(normalized), replace = T, prob = c(0.8, 0.2))
+  train <- normalized[ind == 1,]
+  test <- normalized[ind == 2,]
+  ''')
 
-# Train naive bayes model
-r('model <- naive_bayes(CLUSTER ~ ., data = train)')
+  # Train naive bayes model
+  r('model <- naive_bayes(CLUSTER ~ ., data = train)')
 
-# Confusion Matrix - train data
-r('''
-p1 <- predict(model, train)
-tab1 <- table(p1, train$CLUSTER)
-1 - sum(diag(tab1)) / sum(tab1)
-''')
+  # Confusion Matrix - train data
+  r('''
+  p1 <- predict(model, train)
+  tab1 <- table(p1, train$CLUSTER)
+  1 - sum(diag(tab1)) / sum(tab1)
+  ''')
 
-# Confusion Matrix - test data
-r('''
-p2 <- predict(model, test)
-tab2 <- table(p2, test$CLUSTER)
-1 - sum(diag(tab2)) / sum(tab2)
-''')
+  # Confusion Matrix - test data
+  r('''
+  p2 <- predict(model, test)
+  tab2 <- table(p2, test$CLUSTER)
+  1 - sum(diag(tab2)) / sum(tab2)
+  ''')
 
-# To Replace with User Input
-r('''
-newPrice <- 750
-newBevType <- "IMPORT BEER"
-newSize <- "1 GALL (4)"
-''')
+  # To Replace with User Input
+  r('''
+  newPrice <- frontlinePrice
+  newBevType <- beverageType
+  newSize <- packageSize
+  ''')
 
-# Normalize user input
-r('''
-newPrice <- (newPrice-min(db$FrontlinePrice))/(max(db$FrontlinePrice)-min(db$FrontlinePrice))
+  # Normalize user input
+  r('''
+  newPrice <- (newPrice-min(db$FrontlinePrice))/(max(db$FrontlinePrice)-min(db$FrontlinePrice))
 
-newBevType <- str_replace_all(newBevType, " ", ".")
-newBevType <- paste("BeverageType_", newBevType, sep="")
+  newBevType <- str_replace_all(newBevType, " ", ".")
+  newBevType <- paste("BeverageType_", newBevType, sep="")
 
-newSize <- str_replace_all(newSize, " ", ".")
-newSize <- str_replace_all(newSize, "/", ".")
-newSize <- str_replace_all(newSize, "\\(", ".")
-newSize <- str_replace_all(newSize, "\\)", ".")
-newSize <- paste("Package_X", newSize, sep="")
+  newSize <- str_replace_all(newSize, " ", ".")
+  newSize <- str_replace_all(newSize, "/", ".")
+  newSize <- str_replace_all(newSize, "\\(", ".")
+  newSize <- str_replace_all(newSize, "\\)", ".")
+  newSize <- paste("Package_X", newSize, sep="")
 
-newProduct <- vector(mode="numeric", length=ncol(normalized))
+  newProduct <- vector(mode="numeric", length=ncol(normalized))
 
-newProduct[match("FrontlinePrice", names(normalized))] <- newPrice
-newProduct[match(newBevType, names(normalized))] <- 1
-newProduct[match(newSize, names(normalized))] <- 1
-''')
+  newProduct[match("FrontlinePrice", names(normalized))] <- newPrice
+  newProduct[match(newBevType, names(normalized))] <- 1
+  newProduct[match(newSize, names(normalized))] <- 1
+  ''')
 
-# Form data frame for normalized user input
-r('''
-newProduct <- as.data.frame(t(newProduct))
-colnames(newProduct) <- colnames(normalized[,1:ncol(normalized)-1])
-''')
+  # Form data frame for normalized user input
+  r('''
+  newProduct <- as.data.frame(t(newProduct))
+  colnames(newProduct) <- colnames(normalized[,1:ncol(normalized)-1])
+  ''')
 
-# Use Naive Bayes model to predict cluster
-r('clusterPredict <- predict(model, newProduct)')
+  # Use Naive Bayes model to predict cluster
+  r('clusterPredict <- predict(model, newProduct)')
 
-# Get all items within the predicted cluster
-r('''
-inCluster <- subset(db, Cluster == clusterPredict)
-itemList <- inCluster[['ItemKey']]
-''')
+  # Get all items within the predicted cluster
+  r('''
+  inCluster <- subset(db, Cluster == clusterPredict)
+  itemList <- inCluster[['ItemKey']]
+  ''')
 
-# Get list of customers that sell items within the predicted cluster
-r('''
-Customer_Product <- readxl::read_xlsx("combined_data.xlsx", sheet = "Customer-Product")
+  # Get list of customers that sell items within the predicted cluster
+  r('''
+  Customer_Product <- readxl::read_xlsx("combined_data.xlsx", sheet = "Customer-Product")
 
-i = 1
-custList <- vector()
-for(ID in itemList) {
-  temp <- subset(Customer_Product, ItemKey == itemList[i])
-  custList <- c(custList, temp["CusKey"])
-  i = i + 1
-}
-
-custList <- unlist(custList, recursive = FALSE)
-custList <- unname(custList)
-custList <- unique(custList)
-''')
-
-# Get table of customers that sold these items
-r('''
-isFirst = TRUE
-for (ID in itemList) {
-  if (isFirst) {
-    items <- subset(Customer_Product, ItemKey == ID)
-    isFirst = FALSE
+  i = 1
+  custList <- vector()
+  for(ID in itemList) {
+    temp <- subset(Customer_Product, ItemKey == itemList[i])
+    custList <- c(custList, temp["CusKey"])
+    i = i + 1
   }
-  else {
-    temp <- subset(Customer_Product, ItemKey == ID)
-    items <- rbind(items, temp)
+
+  custList <- unlist(custList, recursive = FALSE)
+  custList <- unname(custList)
+  custList <- unique(custList)
+  ''')
+
+  # Get table of customers that sold these items
+  r('''
+  isFirst = TRUE
+  for (ID in itemList) {
+    if (isFirst) {
+      items <- subset(Customer_Product, ItemKey == ID)
+      isFirst = FALSE
+    }
+    else {
+      temp <- subset(Customer_Product, ItemKey == ID)
+      items <- rbind(items, temp)
+    }
   }
-}
 
-isFirst = TRUE
-for (ID in custList) {
-  if (isFirst) {
-    itemSellers <- subset(items, CusKey == ID)
-    isFirst = FALSE
+  isFirst = TRUE
+  for (ID in custList) {
+    if (isFirst) {
+      itemSellers <- subset(items, CusKey == ID)
+      isFirst = FALSE
+    }
+    else {
+      temp <- subset(items, CusKey == ID)
+      itemSellers <- rbind(itemSellers, temp)
+    }
   }
-  else {
-    temp <- subset(items, CusKey == ID)
-    itemSellers <- rbind(itemSellers, temp)
+  ''')
+
+  # Get updated customer list
+  r('''
+  custList <- itemSellers[['CusKey']]
+  custList <- unique(custList)
+  ''')
+
+  # For each customer get the net revenue of all cluster items sold by specific customer
+  r('''
+  custProfit <- vector()
+  for (ID in custList) {
+    temp <- subset(itemSellers, CusKey == ID)
+    custProfit <- c(custProfit, sum(temp$NetRevenue))
   }
-}
-''')
+  ''')
 
-# Get updated customer list
-r('''
-custList <- itemSellers[['CusKey']]
-custList <- unique(custList)
-''')
+  # Get table of these customers
+  r('''
+  customers <- readxl::read_xlsx("combined_data.xlsx", sheet = "Customer")
 
-# For each customer get the net revenue of all cluster items sold by specific customer
-r('''
-custProfit <- vector()
-for (ID in custList) {
-  temp <- subset(itemSellers, CusKey == ID)
-  custProfit <- c(custProfit, sum(temp$NetRevenue))
-}
-''')
-
-# Get table of these customers
-r('''
-customers <- readxl::read_xlsx("combined_data.xlsx", sheet = "Customer")
-
-isFirst = TRUE
-for (ID in custList) {
-  if (isFirst) {
-    newPrediction <- subset(customers, CusKey == ID)
-    isFirst = FALSE
+  isFirst = TRUE
+  for (ID in custList) {
+    if (isFirst) {
+      newPrediction <- subset(customers, CusKey == ID)
+      isFirst = FALSE
+    }
+    else {
+      temp <- subset(customers, CusKey == ID)
+      newPrediction <- rbind(newPrediction, temp)
+    }
   }
-  else {
-    temp <- subset(customers, CusKey == ID)
-    newPrediction <- rbind(newPrediction, temp)
-  }
-}
-''')
+  ''')
 
-# Replace NetRevenue column (originally total customer revenue) with new NetRevenue
-#(NetRevenue of customer sales on cluster items)
-r('newPrediction$NetRevenue <- custProfit')
+  # Replace NetRevenue column (originally total customer revenue) with new NetRevenue
+  #(NetRevenue of customer sales on cluster items)
+  r('newPrediction$NetRevenue <- custProfit')
 
-# Order by NetRevenue and get top 10%
-r('''
-newPrediction  <- newPrediction [order(-newPrediction $NetRevenue),]
+  # Order by NetRevenue and get top 10%
+  r('''
+  newPrediction  <- newPrediction [order(-newPrediction $NetRevenue),]
 
-top10Percent = ceiling(nrow(newPrediction ) * 0.10)
+  top10Percent = ceiling(nrow(newPrediction ) * 0.10)
 
-newPrediction  <- head(newPrediction , top10Percent)
+  newPrediction  <- head(newPrediction , top10Percent)
 
-openxlsx::write.xlsx(newPrediction, "NewProductRecommendation.xlsx", sheetName = "New Product Recommendations")
-''')
-}
+  openxlsx::write.xlsx(newPrediction, "NewProductRecommendation.xlsx", sheetName = "New Product Recommendations")
+  ''')
 
-if(EXISTING BEVERAGE){
-    # Get Census data and update to numeric values
-    r('''
-    census$ZIP_Pop_Density <- as.numeric(census$ZIP_Pop_Density)
-    census$ZIP_med_income <- as.numeric(census$ZIP_med_income)
-    census$ZIP_med_age <- as.numeric(census$ZIP_med_age)
-    census$ZIP_P_Black <- as.numeric(census$ZIP_P_Black)
-    census$ZIP_P_Asian <- as.numeric(census$ZIP_P_Asian)
-    census$ZIP_P_Hispanic <- as.numeric(census$ZIP_P_Hispanic)
+def calculateExistingR(itemKey):
+  robjecs.r('itemKey=fetch("%s")') % (itemKey)
 
-    census <- na.omit(census)
+  # Get Census data and update to numeric values
+  r('''
+  census$ZIP_Pop_Density <- as.numeric(census$ZIP_Pop_Density)
+  census$ZIP_med_income <- as.numeric(census$ZIP_med_income)
+  census$ZIP_med_age <- as.numeric(census$ZIP_med_age)
+  census$ZIP_P_Black <- as.numeric(census$ZIP_P_Black)
+  census$ZIP_P_Asian <- as.numeric(census$ZIP_P_Asian)
+  census$ZIP_P_Hispanic <- as.numeric(census$ZIP_P_Hispanic)
 
-    ef <- census
-    ''')
+  census <- na.omit(census)
 
-    # Transform data
-    r('''
-    a <- min(census$ZIP_Pop_Density[census$ZIP_Pop_Density>0])-.0001
-    g <- min(census$ZIP_P_Black[census$ZIP_P_Black>0])-.0001
-    h <- min(census$ZIP_P_Asian[census$ZIP_P_Asian>0])-.0001
-    i <- min(census$ZIP_P_Hispanic[census$ZIP_P_Hispanic>0])-.0001
-    census %>%
-    mutate( 
-        pd.log = log(ifelse(ZIP_Pop_Density==0,a,ZIP_Pop_Density)),
-        pBl.log = log(ifelse(ZIP_P_Black==0,g,ZIP_P_Black)),
-        pAn.log = log(ifelse(ZIP_P_Asian==0,h,ZIP_P_Asian)),
-        pHL.log = log(ifelse(ZIP_P_Hispanic==0,i,ZIP_P_Hispanic))
+  ef <- census
+  ''')
+
+  # Transform data
+  r('''
+  a <- min(census$ZIP_Pop_Density[census$ZIP_Pop_Density>0])-.0001
+  g <- min(census$ZIP_P_Black[census$ZIP_P_Black>0])-.0001
+  h <- min(census$ZIP_P_Asian[census$ZIP_P_Asian>0])-.0001
+  i <- min(census$ZIP_P_Hispanic[census$ZIP_P_Hispanic>0])-.0001
+  census %>%
+  mutate( 
+    pd.log = log(ifelse(ZIP_Pop_Density==0,a,ZIP_Pop_Density)),
+    pBl.log = log(ifelse(ZIP_P_Black==0,g,ZIP_P_Black)),
+    pAn.log = log(ifelse(ZIP_P_Asian==0,h,ZIP_P_Asian)),
+    pHL.log = log(ifelse(ZIP_P_Hispanic==0,i,ZIP_P_Hispanic))
     ) -> census
-    ''')
+  ''')
 
-    # Normalize data
-    r('sccensus <- scale(census)')
+  # Normalize data
+  r('sccensus <- scale(census)')
 
-    # Hierarchical clustering
-    r('''
-    sccensus <- census %>% 
-    dplyr::select(2:3, 7:10) %>% 
-    scale()
-    set.seed(4323)
-    sccensus %>%
-        dist() %>%
-        hclust() -> census.hclust
-    fviz_dend(census.hclust, k = 16, rect = TRUE, rect_fill = TRUE, lwd = 0.5, cex = 0.5) # pop_dens, med_age, %s, med_inc)
-    ''')
+  # Hierarchical clustering
+  r('''
+  sccensus <- census %>% 
+  dplyr::select(2:3, 7:10) %>% 
+  scale()
+  set.seed(4323)
+  sccensus %>%
+      dist() %>%
+      hclust() -> census.hclust
+  fviz_dend(census.hclust, k = 16, rect = TRUE, rect_fill = TRUE, lwd = 0.5, cex = 0.5) # pop_dens, med_age, %s, med_inc)
+  ''')
 
-    # Hierarchical cuts
-    r('''
-    R16 <- ef %>%
-    mutate(cluster = cutree(census.hclust,16))
-    ''')
+  # Hierarchical cuts
+  r('''
+  R16 <- ef %>%
+  mutate(cluster = cutree(census.hclust,16))
+  ''')
 
-    # To be replaced with user input
-    r('itemkey <- "83914"')
+  # To be replaced with user input
+  r('itemkey <- itemKey')
 
-    # Get customers that sell the specific product
-    r('''
-    Customer_Product <- readxl::read_xlsx("combined_data.xlsx", sheet = "Customer-Product")
+  # Get customers that sell the specific product
+  r('''
+  Customer_Product <- readxl::read_xlsx("combined_data.xlsx", sheet = "Customer-Product")
 
-    soldItem <- subset(Customer_Product, ItemKey == itemkey)
-    ''')
+  soldItem <- subset(Customer_Product, ItemKey == itemkey)
+  ''')
 
-    # Narrow down to only top 10% of customers
-    r('''
-    soldItem <- soldItem[order(soldItem$NetRevenue),]
+  # Narrow down to only top 10% of customers
+  r('''
+  soldItem <- soldItem[order(soldItem$NetRevenue),]
 
-    top10Percent = ceiling(nrow(soldItem) * 0.10)
+  top10Percent = ceiling(nrow(soldItem) * 0.10)
 
-    topSellers <- head(soldItem, top10Percent)
+  topSellers <- head(soldItem, top10Percent)
 
-    cusList <- topSellers[['CusKey']]
-    ''')
+  cusList <- topSellers[['CusKey']]
+  ''')
 
-    # Get zip of customers
-    r('''
-    customers <- readxl::read_xlsx("combined_data.xlsx", sheet = "Customer")
+  # Get zip of customers
+  r('''
+  customers <- readxl::read_xlsx("combined_data.xlsx", sheet = "Customer")
 
-    i = 1
-    zipList <- character()
-    for(ID in cusList) {
-        temp <- subset(customers, CusKey == cusList[i])
-        zipList <- c(zipList, as.character(temp[1, "ShipZip"]))
-        i = i + 1
+  i = 1
+  zipList <- character()
+  for(ID in cusList) {
+    emp <- subset(customers, CusKey == cusList[i])
+    zipList <- c(zipList, as.character(temp[1, "ShipZip"]))
+    i = i + 1
+  }
+  ''')
+
+  # Determine which cluster theze zips belong to
+  r('''
+  getMode <- function(v) {
+  uniqv <- unique(v)
+  uniqv[which.max(tabulate(match(v, uniqv)))]
+  }
+
+  BestZIP <- getMode(zipList)
+
+  BestZIPCluster <- subset(R16, ClstZIP == BestZIP)
+  BestCluster <- as.character(BestZIPCluster[1, "cluster"])
+  ''')
+
+  # Get zips from this cluster
+  r('''
+  similarZones <- subset(R16, cluster == BestCluster)
+
+  similarZips <- similarZones[['ClstZIP']]
+  ''')
+
+  # Get customers in these zips
+  r('''
+  i = 1
+  similarCust <- vector()
+  for(zips in similarZips) {
+    temp <- subset(customers, ShipZip == similarZips[i])
+    similarCust <- c(similarCust, temp["CusKey"])
+    i = i + 1
+  }
+
+  similarCust <- unlist(similarCust, recursive = FALSE)
+  similarCust <- unname(similarCust)
+  similarCust <- unique(similarCust)
+  ''')
+
+  # Remove customers that already sell the product
+  r('''
+  newCustomers <- vector()
+  for (ID in similarCust) {
+    temp <- subset(Customer_Product, CusKey == ID & ItemKey == itemkey)
+      if (nrow(temp) == 0) {
+        newCustomers <- c(newCustomers, ID)
+      }
     }
-    ''')
+  ''')
 
-    # Determine which cluster theze zips belong to
-    r('''
-    getMode <- function(v) {
-    uniqv <- unique(v)
-    uniqv[which.max(tabulate(match(v, uniqv)))]
+  # Build the final data frame
+  r('''
+  isFirst = TRUE
+  for (ID in newCustomers) {
+    if (isFirst) {
+      oldPrediction  <- subset(customers, CusKey == ID)
+      isFirst = FALSE
+    } else {
+      temp <- subset(customers, CusKey == ID)
+      oldPrediction <- rbind(oldPrediction, temp)
     }
+  }
+  ''')
 
-    BestZIP <- getMode(zipList)
-
-    BestZIPCluster <- subset(R16, ClstZIP == BestZIP)
-    BestCluster <- as.character(BestZIPCluster[1, "cluster"])
-    ''')
-
-    # Get zips from this cluster
-    r('''
-    similarZones <- subset(R16, cluster == BestCluster)
-
-    similarZips <- similarZones[['ClstZIP']]
-    ''')
-
-    # Get customers in these zips
-    r('''
-    i = 1
-    similarCust <- vector()
-    for(zips in similarZips) {
-        temp <- subset(customers, ShipZip == similarZips[i])
-        similarCust <- c(similarCust, temp["CusKey"])
-        i = i + 1
-    }
-
-    similarCust <- unlist(similarCust, recursive = FALSE)
-    similarCust <- unname(similarCust)
-    similarCust <- unique(similarCust)
-    ''')
-
-    # Remove customers that already sell the product
-    r('''
-    newCustomers <- vector()
-    for (ID in similarCust) {
-        temp <- subset(Customer_Product, CusKey == ID & ItemKey == itemkey)
-        if (nrow(temp) == 0) {
-            newCustomers <- c(newCustomers, ID)
-        }
-    }
-    ''')
-
-    # Build the final data frame
-    r('''
-    isFirst = TRUE
-    for (ID in newCustomers) {
-        if (isFirst) {
-        oldPrediction  <- subset(customers, CusKey == ID)
-        isFirst = FALSE
-        } else {
-        temp <- subset(customers, CusKey == ID)
-        oldPrediction <- rbind(oldPrediction, temp)
-        }
-    }
-    ''')
-
-    # Order data frame by net revenue
-    r('''
-    oldPrediction <- oldPrediction[order(-oldPrediction$NetRevenue),]
-    openxlsx::write.xlsx(oldPrediction, "ExistingProductRecommendation.xlsx", sheetName = "Existing Product Recommendations")
-    ''')
-} """
+  # Order data frame by net revenue
+  r('''
+  oldPrediction <- oldPrediction[order(-oldPrediction$NetRevenue),]
+  openxlsx::write.xlsx(oldPrediction, "ExistingProductRecommendation.xlsx", sheetName = "Existing Product Recommendations")
+  ''')
