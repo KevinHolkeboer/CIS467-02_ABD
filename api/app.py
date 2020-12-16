@@ -71,6 +71,7 @@ from rpy2.robjects import r
 #packages = ("tidyverse", "naivebayes", "fpc", "dbscan", "tidymodels", "xlsx",
 #"devtools", "ape", "cluster", "openxlsx", "clustertend", "clv", "clValid", "dendextend", "fpc", "gridExtra",
 #"mvtnorm", "mvoutlier", "NbClust", "outliers", "psych", "pvclust", "readxl", "Rtsne")
+
 # #Run this once to install the packages
 #utils.install_packages(StrVector(packages))
 
@@ -79,11 +80,31 @@ from rpy2.robjects import r
 #r('devtools::install_github("kassambara/factoextra")')
 #r('devtools::install_github("mhahsler/dbscan")')
 
-# #Load R libraries
-#r('library(factoextra)')
-#r('library(tidyverse, tidymodels)')
-#r('library(naivebayes, dbscan)')
-#r('library(xlsx)')
+# #Load R libraries 
+#NOTE: (Some packages are in the code as package::function)
+r('''
+library(ape)
+library(cluster)
+library(clustertend)
+library(clv)
+library(clValid)
+library(dbscan)
+library(dendextend)
+library(factoextra)
+library(fpc)
+library(gridExtra)
+library(mvtnorm)
+library(mvoutlier)
+library(naivebayes)
+library(NbClust)
+library(outliers)
+library(psych)
+library(pvclust)
+library(Rtnse)
+library(tidyverse)
+library(tidymodels)
+library(xlsx)
+''')
 
 #USE TO TEST BASIC R STUFF WORKS
 r('print("Libraries installed and loaded")')
