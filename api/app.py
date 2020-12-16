@@ -53,7 +53,7 @@ def calculateExisting():
 @app.route('/login', methods = ['POST'])
 def login():
     creds = request.get_json(force=True)
-    if(creds['creds']['username'] == "sd" and creds['creds']['username']  == "sd"):
+    if(creds['creds']['username'] == "ABD" and creds['creds']['password']  == "ABD"):
         return ("", 201)   
     else:
         return ("", 200)
@@ -109,14 +109,16 @@ library(tidymodels)
 r('print("Libraries installed and loaded")')
 r('x <- rnorm(100)')
 r('print(x)')
-r('print(getwd())')
+#r('wd <- print(getwd())')
 
 #import rpy2.robjects as robjects
 
 #Read files into R
-#r('db <- readxl::read_xlsx("basedir/ExcelFiles/uploadData.xlsx", sheet="Product")')
-#r('census <- readxl::read_xlsx("basedir/ExcelFiles/uploadData.xlsx", sheet = "Census")')
-
+r('db <- readxl::read_xlsx("/Users/zack/Desktop/CIS467-02_ABD/api/ExcelFiles/uploadData.xlsx", sheet="Product")')
+r('census <- readxl::read_xlsx("/Users/zack/Desktop/CIS467-02_ABD/api/ExcelFiles/uploadData.xlsx", sheet = "Census")')
+r('print(db[1,1])')
+r('library(openxlsx)')
+r('write.xlsx(db, "/ExcelFiles/NewProductRecommendation.xlsx", sheetName = "New Product Recommendations")')
 #Check the column names to ensure all columns exist
 """r(```
    if(!(colnames(db) %in% c("ItemKey", "ItemName", "BeverageType", "Package", "PackName", "FrontlinePrice")) |
@@ -128,7 +130,6 @@ r('print(getwd())')
 """ if(NEW BEVERAGE){
 # Obtain product data and normalize
 r('''
-  db <- readxl::read_xlsx("combined_data.xlsx", sheet = "Product")
   rec <- 
   recipe(formula = ~ FrontlinePrice + BeverageType + Package, data = db) %>% 
   step_range(all_numeric()) %>% 
@@ -300,15 +301,13 @@ top10Percent = ceiling(nrow(newPrediction ) * 0.10)
 
 newPrediction  <- head(newPrediction , top10Percent)
 
-openxlsx::write.xlsx(newPrediction, "NewProductRecommendation.xlsx", sheetName = "New Product Recommendations")
+openxlsx::write.xlsx(newPrediction, "/ExcelFiles/NewProductRecommendation.xlsx", sheetName = "New Product Recommendations")
 ''')
 }
 
 if(EXISTING BEVERAGE){
     # Get Census data and update to numeric values
     r('''
-    census <- readxl::read_xlsx("combined_data.xlsx", sheet = "Census")
-
     census$ZIP_Pop_Density <- as.numeric(census$ZIP_Pop_Density)
     census$ZIP_med_income <- as.numeric(census$ZIP_med_income)
     census$ZIP_med_age <- as.numeric(census$ZIP_med_age)
@@ -454,6 +453,6 @@ if(EXISTING BEVERAGE){
     # Order data frame by net revenue
     r('''
     oldPrediction <- oldPrediction[order(-oldPrediction$NetRevenue),]
-    openxlsx::write.xlsx(oldPrediction, "ExistingProductRecommendation.xlsx", sheetName = "Existing Product Recommendations")
+    openxlsx::write.xlsx(oldPrediction, "/ExcelFiles/ExistingProductRecommendation.xlsx", sheetName = "Existing Product Recommendations")
     ''')
 } """
