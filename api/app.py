@@ -100,22 +100,22 @@ library(NbClust)
 library(outliers)
 library(psych)
 library(pvclust)
-library(Rtnse)
+library(Rtsne)
 library(tidyverse)
 library(tidymodels)
-library(xlsx)
 ''')
 
 #USE TO TEST BASIC R STUFF WORKS
 r('print("Libraries installed and loaded")')
 r('x <- rnorm(100)')
 r('print(x)')
+r('print(getwd())')
 
 #import rpy2.robjects as robjects
 
 #Read files into R
-#r(db <- readxl::read_xlsx("combined_data.xlsx", sheet="Product"))
-#r(census <- readxl::read_xlsx("combined_data.xlsx", sheet = "Census"))
+#r('db <- readxl::read_xlsx("basedir/ExcelFiles/uploadData.xlsx", sheet="Product")')
+#r('census <- readxl::read_xlsx("basedir/ExcelFiles/uploadData.xlsx", sheet = "Census")')
 
 #Check the column names to ensure all columns exist
 """r(```
