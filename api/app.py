@@ -69,7 +69,8 @@ from rpy2.robjects import r
 
 #from rpy2.robjects.vectors import StrVector
 #packages = ("tidyverse", "naivebayes", "fpc", "dbscan", "tidymodels", "xlsx",
-#"devtools", "ape", "cluster")
+#"devtools", "ape", "cluster", "openxlsx", "clustertend", "clv", "clValid", "dendextend", "fpc", "gridExtra",
+#"mvtnorm", "mvoutlier", "NbClust", "outliers", "psych", "pvclust", "readxl", "Rtsne")
 # #Run this once to install the packages
 #utils.install_packages(StrVector(packages))
 
@@ -278,7 +279,7 @@ top10Percent = ceiling(nrow(newPrediction ) * 0.10)
 
 newPrediction  <- head(newPrediction , top10Percent)
 
-write.xlsx(newPrediction, UPLOAD_FOLDER, sheetName = "New Product Recommendations")
+openxlsx::write.xlsx(newPrediction, "NewProductRecommendation.xlsx", sheetName = "New Product Recommendations")
 ''')
 }
 
@@ -432,6 +433,6 @@ if(EXISTING BEVERAGE){
     # Order data frame by net revenue
     r('''
     oldPrediction <- oldPrediction[order(-oldPrediction$NetRevenue),]
-    write.xlsx(oldPrediction, UPLOAD_FOLDER, sheetName = "Existing Product Recommendations")
+    openxlsx::write.xlsx(oldPrediction, "ExistingProductRecommendation.xlsx", sheetName = "Existing Product Recommendations")
     ''')
 } """
