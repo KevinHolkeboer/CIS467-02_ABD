@@ -116,9 +116,7 @@ r('print(x)')
 #Read files into R
 r('db <- readxl::read_xlsx("/Users/zack/Desktop/CIS467-02_ABD/api/ExcelFiles/uploadData.xlsx", sheet="Product")')
 r('census <- readxl::read_xlsx("/Users/zack/Desktop/CIS467-02_ABD/api/ExcelFiles/uploadData.xlsx", sheet = "Census")')
-r('print(db[1,1])')
-r('library(openxlsx)')
-r('write.xlsx(db, "/ExcelFiles/NewProductRecommendation.xlsx", sheetName = "New Product Recommendations")')
+
 #Check the column names to ensure all columns exist
 """r(```
    if(!(colnames(db) %in% c("ItemKey", "ItemName", "BeverageType", "Package", "PackName", "FrontlinePrice")) |
@@ -301,7 +299,7 @@ top10Percent = ceiling(nrow(newPrediction ) * 0.10)
 
 newPrediction  <- head(newPrediction , top10Percent)
 
-openxlsx::write.xlsx(newPrediction, "/ExcelFiles/NewProductRecommendation.xlsx", sheetName = "New Product Recommendations")
+openxlsx::write.xlsx(newPrediction, "NewProductRecommendation.xlsx", sheetName = "New Product Recommendations")
 ''')
 }
 
@@ -453,6 +451,6 @@ if(EXISTING BEVERAGE){
     # Order data frame by net revenue
     r('''
     oldPrediction <- oldPrediction[order(-oldPrediction$NetRevenue),]
-    openxlsx::write.xlsx(oldPrediction, "/ExcelFiles/ExistingProductRecommendation.xlsx", sheetName = "Existing Product Recommendations")
+    openxlsx::write.xlsx(oldPrediction, "ExistingProductRecommendation.xlsx", sheetName = "Existing Product Recommendations")
     ''')
 } """
