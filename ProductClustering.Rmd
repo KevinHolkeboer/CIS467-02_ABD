@@ -2,7 +2,7 @@
 title: "ProductClustering.Rmd"
 author: "Zack Poorman, Justin Houstin"
 date: "12/6/2020"
-output: html_document
+output: knitr::purl("ProductClustering.Rmd", "ProductClustering.R")
 ---
 
 ```{r}
@@ -19,6 +19,7 @@ library(naivebayes)
 ```{r}
 # Obtain product data and normalize.
 db <- readxl::read_xlsx("combined_data.xlsx", sheet = "Product")
+
 rec <- 
   recipe(formula = ~ FrontlinePrice + BeverageType + Package, data = db) %>% 
   step_range(all_numeric()) %>% 
@@ -52,9 +53,9 @@ tab2 <- table(p2, test$CLUSTER)
 1 - sum(diag(tab2)) / sum(tab2)
 
 # To Replace with User Input.
-newPrice <- 750
-newBevType <- "IMPORT BEER"
-newSize <- "1 GALL (4)"
+newPrice <- 36
+newBevType <- "CRAFT BEER"
+newSize <- "12OZ 4/6PK"
 
 # Normalize user input.
 newPrice <- (newPrice-min(db$FrontlinePrice))/(max(db$FrontlinePrice)-min(db$FrontlinePrice))
@@ -68,12 +69,13 @@ newSize <- str_replace_all(newSize, "\\(", ".")
 newSize <- str_replace_all(newSize, "\\)", ".")
 newSize <- paste("Package_X", newSize, sep="")
 
+
 newProduct <- vector(mode="numeric", length=ncol(normalized))
 
 newProduct[match("FrontlinePrice", names(normalized))] <- newPrice
 newProduct[match(newBevType, names(normalized))] <- 1
 newProduct[match(newSize, names(normalized))] <- 1
-
+newProduct
 # Form data frame for normalized user input.
 newProduct <- as.data.frame(t(newProduct))
 colnames(newProduct) <- colnames(normalized[,1:ncol(normalized)-1])
@@ -160,5 +162,5 @@ newPrediction  <- newPrediction [order(-newPrediction $NetRevenue),]
 top10Percent = ceiling(nrow(newPrediction ) * 0.10)
 
 newPrediction  <- head(newPrediction , top10Percent)
-
+openxlsx::write.xlsx(newPrediction, "NewProductRecommendation.xlsx", sheetName = "New Product Recommendations")
 ```
