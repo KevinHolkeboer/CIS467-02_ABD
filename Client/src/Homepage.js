@@ -94,10 +94,6 @@ function Homepage() {
         const ps = [...new Set(packSizes)]
         setPackSizes(ps)
         setLoaded(true)
-        console.log(currItems)
-        console.log(packSizes)
-        console.log(bevTypes)
-
 
     }
 
@@ -128,7 +124,8 @@ function Homepage() {
         }
         let config = {
             headers: {
-                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Max-Age": "300",
+                "contentType" : "text/plain"
             }
         }
         axios.post(`http://brandapp.alliancebeverage.com:80/login`, { creds }, config).then(res => {
@@ -276,11 +273,26 @@ function Homepage() {
                                                     "Access-Control-Allow-Origin": "*",
                                                 }
                                             }
-                                            axios.post(`http://brandapp.alliancebeverage.com:80/calculateNew`, { data }, config)
-                                                .then(res => console.log(res))
+                                            axios({
+                                                method: "post",
+                                                url: `http://brandapp.alliancebeverage.com:80/calculateNew`,
+                                                data: data,
+                                                headers: {
+                                                    "Access-Control-Allow-Origin": "*",
+                                                },
+                                                responseType: 'arraybuffer',
+                                            })
+                                                .then((response) => {
+                                                    const url = window.URL.createObjectURL(new Blob([response.data]));
+                                                    const link = document.createElement('a');
+                                                    link.href = url;
+                                                    link.setAttribute('download', 'customerNew.xlsx'); //or any other extension
+                                                    document.body.appendChild(link);
+                                                    link.click();
+                                                })
                                                 .catch(error => {
                                                     console.log(error);
-                                                });
+                                                })
                                         }
                                         else if (value === 20) {
                                             const data = {
@@ -305,7 +317,7 @@ function Homepage() {
                                                     const url = window.URL.createObjectURL(new Blob([response.data]));
                                                     const link = document.createElement('a');
                                                     link.href = url;
-                                                    link.setAttribute('download', 'file.xlsx'); //or any other extension
+                                                    link.setAttribute('download', 'customerExisting.xlsx'); //or any other extension
                                                     document.body.appendChild(link);
                                                     link.click();
                                                 })

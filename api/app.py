@@ -5,24 +5,20 @@ from flask import Flask, flash, request, redirect, url_for, send_from_directory,
 from flask_cors import CORS
 import sys
 
-basedir = os.path.abspath(os.path.dirname(__file__))
-UPLOAD_FOLDER = basedir + '/ExcelFiles'
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+UPLOAD_FOLDER = BASE_DIR + '/ExcelFiles'
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 app.config['CORS_ORIGINS'] = ['https://brandapp.alliancebeverage.com']
 cors = CORS(app)
 
-@app.route('/test', methods = ['POST'])
-def test():
-    print("hello from API")
-    return ('', 200)
 
 
 @app.route('/upload', methods = ['POST'])
 def upload():
     file = request.files['file']
-    file.save(os.path.join(app.config['UPLOAD_FOLDER'], file.filename))
+    file.save(os.path.join(app.config['UPLOAD_FOLDER'], "uploadData.xlsx"))
     product_Data= pandas.read_excel(file, sheet_name='Product')
     Product_Data_Json = product_Data.to_json(orient='records')
 
@@ -33,20 +29,23 @@ def upload():
 @app.route('/calculateNew', methods = ['POST'])
 
 def calculateNew():
-    ItemKey = request.get_json(force=True)
-    print(ItemKey,  file=sys.stderr)
-    request
-    return ItemKey, 200
+    NewBev = request.get_json(force=True)
+    calculateNewR(NewBev["bevType"], NewBev["FrontlinePrice"], NewBev["packSize"] )
+    try:
+        return send_from_directory(app.config['UPLOAD_FOLDER'], "NewProductRecommendation.xlsx", as_attachment=True)
+    except:
+        return ("Error! File not uploaded correctly ", 404)
+
+
 
 @app.route('/calculateExisting', methods = ['POST'])
 def calculateExisting():
-    NewBev = request.get_json(force=True)
-    print(NewBev,  file=sys.stderr)
+    ExistingBev = request.get_json(force=True)
+    calculateExistingR(ExistingBev["ItemKey"])
     try:
-        return send_from_directory(UPLOAD_FOLDER, "combined_data_test.xlsx", as_attachment=True)
+        return send_from_directory(app.config['UPLOAD_FOLDER'], "ExistingProductRecommendation.xlsx", as_attachment=True)
     except:
-        return ("oops", 404)
-
+        return ("Error! File not uploaded correctly ", 404)
 
 
 
@@ -60,25 +59,26 @@ def login():
     
 
 
-from rpy2.robjects import r
+import rpy2.robjects as robjects
+r = robjects.r
 
-# Choosing a CRAN Mirror
-#import rpy2.robjects.packages as rpackages
-#utils = rpackages.importr('utils')
-#utils.chooseCRANmirror(ind=1)
+#Choosing a CRAN Mirror
+# import rpy2.robjects.packages as rpackages
+# utils = rpackages.importr('utils')
+# utils.chooseCRANmirror(ind=1)
 
-#from rpy2.robjects.vectors import StrVector
-#packages = ("tidyverse", "naivebayes", "fpc", "dbscan", "tidymodels", "xlsx",
-#"devtools", "ape", "cluster", "openxlsx", "clustertend", "clv", "clValid", "dendextend", "fpc", "gridExtra",
-#"mvtnorm", "mvoutlier", "NbClust", "outliers", "psych", "pvclust", "readxl", "Rtsne")
+# from rpy2.robjects.vectors import StrVector
+# packages = ("tidyverse", "naivebayes", "fpc", "dbscan", "tidymodels", "xlsx",
+# "devtools", "ape", "cluster", "openxlsx", "clustertend", "clv", "clValid", "dendextend", "fpc", "gridExtra",
+# "mvtnorm", "mvoutlier", "NbClust", "outliers", "psych", "pvclust", "readxl", "Rtsne", "openxlsx")
 
 # #Run this once to install the packages
-#utils.install_packages(StrVector(packages))
+# utils.install_packages(StrVector(packages))
 
-#r('library(devtools)')
-# #These packages get installed when updated and on initial run
-#r('devtools::install_github("kassambara/factoextra")')
-#r('devtools::install_github("mhahsler/dbscan")')
+r('library(devtools)')
+#These packages get installed when updated and on initial run
+r('devtools::install_github("kassambara/factoextra")')
+r('devtools::install_github("mhahsler/dbscan")')
 
 # #Load R libraries 
 #NOTE: (Some packages are in the code as package::function)
@@ -103,11 +103,20 @@ library(pvclust)
 library(Rtsne)
 library(tidyverse)
 library(tidymodels)
+library(writexl)
+library(stringi)
+''')
+
+
+r('''
+library(openxlsx)
+library(magrittr)
+library(dplyr)
+library(recipes)
 ''')
 
 #Read files into R
-r('db <- readxl::read_xlsx("/Users/zack/Desktop/CIS467-02_ABD/api/ExcelFiles/uploadData.xlsx", sheet="Product")')
-r('census <- readxl::read_xlsx("/Users/zack/Desktop/CIS467-02_ABD/api/ExcelFiles/uploadData.xlsx", sheet = "Census")')
+
 
 #Check the column names to ensure all columns exist
 """r(```
@@ -116,21 +125,23 @@ r('census <- readxl::read_xlsx("/Users/zack/Desktop/CIS467-02_ABD/api/ExcelFiles
      #SEND ERROR TO FRONTEND SOMEHOW!!!!!
    }
 """
-import rpy2.robjects as robjects
 
 def calculateNewR(beverageType, frontlinePrice, packageSize):
-  robjecs.r('beverageType=fetch("%s")') % (beverageType)
-  robjecs.r('frontlinePrice=fetch("%s")') % (frontlinePrice)
-  robjecs.r('packageSize=fetch("%s")') % (packageSize)
+
+  robjects.globalenv['BeverageTypeGlob'] = beverageType
+  robjects.globalenv['FrontLinePriceGlob'] = frontlinePrice
+  robjects.globalenv['PackageSizeGlob'] = packageSize
+  r('db <- readxl::read_xlsx("/var/www/FlaskApp/api/ExcelFiles/uploadData.xlsx", sheet="Product")')
+  r('census <- readxl::read_xlsx("/var/www/FlaskApp/api/ExcelFiles/uploadData.xlsx", sheet = "Census")')
+
+  r('beverageType=BeverageTypeGlob')
+  r('frontlinePrice=FrontLinePriceGlob') 
+  r('packageSize=PackageSizeGlob')
 
   # Obtain product data and normalize
   r('''
-    rec <- 
-    recipe(formula = ~ FrontlinePrice + BeverageType + Package, data = db) %>% 
-    step_range(all_numeric()) %>% 
-    step_dummy(all_nominal(), one_hot=T) %>%
-    prep()
-    normalized <- juice(rec)
+  rec <- recipe(formula = ~ FrontlinePrice + BeverageType + Package, data = db) %>% step_range(all_numeric()) %>% step_dummy(all_nominal(), one_hot=T) %>% prep()
+  normalized <- juice(rec)
   ''')
 
   # Cluster data and signify clusters
@@ -171,27 +182,41 @@ def calculateNewR(beverageType, frontlinePrice, packageSize):
   newPrice <- frontlinePrice
   newBevType <- beverageType
   newSize <- packageSize
+ 
   ''')
 
-  # Normalize user input
   r('''
-  newPrice <- (newPrice-min(db$FrontlinePrice))/(max(db$FrontlinePrice)-min(db$FrontlinePrice))
+  newPrice = as.double(newPrice)
+  newPrice <- (newPrice - min(db$FrontlinePrice))/(max(db$FrontlinePrice) - min(db$FrontlinePrice))
 
   newBevType <- str_replace_all(newBevType, " ", ".")
   newBevType <- paste("BeverageType_", newBevType, sep="")
 
   newSize <- str_replace_all(newSize, " ", ".")
+  
+  
+  
   newSize <- str_replace_all(newSize, "/", ".")
-  newSize <- str_replace_all(newSize, "\\(", ".")
-  newSize <- str_replace_all(newSize, "\\)", ".")
+  
+  newSize <- stri_replace_all_fixed(newSize, "(", ".")
+  
+ 
+  newSize <- stri_replace_all_fixed(newSize, ")", ".")
+  
+
   newSize <- paste("Package_X", newSize, sep="")
+  
 
   newProduct <- vector(mode="numeric", length=ncol(normalized))
 
   newProduct[match("FrontlinePrice", names(normalized))] <- newPrice
   newProduct[match(newBevType, names(normalized))] <- 1
   newProduct[match(newSize, names(normalized))] <- 1
+
   ''')
+
+
+  
 
   # Form data frame for normalized user input
   r('''
@@ -210,7 +235,7 @@ def calculateNewR(beverageType, frontlinePrice, packageSize):
 
   # Get list of customers that sell items within the predicted cluster
   r('''
-  Customer_Product <- readxl::read_xlsx("combined_data.xlsx", sheet = "Customer-Product")
+  Customer_Product <- readxl::read_xlsx("/var/www/FlaskApp/api/ExcelFiles/uploadData.xlsx", sheet = "Customer-Product")
 
   i = 1
   custList <- vector()
@@ -269,7 +294,7 @@ def calculateNewR(beverageType, frontlinePrice, packageSize):
 
   # Get table of these customers
   r('''
-  customers <- readxl::read_xlsx("combined_data.xlsx", sheet = "Customer")
+  customers <- readxl::read_xlsx("/var/www/FlaskApp/api/ExcelFiles/uploadData.xlsx", sheet = "Customer")
 
   isFirst = TRUE
   for (ID in custList) {
@@ -295,12 +320,15 @@ def calculateNewR(beverageType, frontlinePrice, packageSize):
   top10Percent = ceiling(nrow(newPrediction ) * 0.10)
 
   newPrediction  <- head(newPrediction , top10Percent)
-
-  openxlsx::write.xlsx(newPrediction, "NewProductRecommendation.xlsx", sheetName = "New Product Recommendations")
+  write_xlsx(list( NewProductRecommendation = newPrediction), "/var/www/FlaskApp/api/ExcelFiles/NewProductRecommendation.xlsx")
   ''')
 
 def calculateExistingR(itemKey):
-  robjecs.r('itemKey=fetch("%s")') % (itemKey)
+  robjects.globalenv['ItemKey'] = itemKey
+  r('db <- readxl::read_xlsx("/var/www/FlaskApp/api/ExcelFiles/uploadData.xlsx", sheet="Product")')
+  r('census <- readxl::read_xlsx("/var/www/FlaskApp/api/ExcelFiles/uploadData.xlsx", sheet = "Census")')
+  r('itemKey = ItemKey') 
+
 
   # Get Census data and update to numeric values
   r('''
@@ -322,13 +350,7 @@ def calculateExistingR(itemKey):
   g <- min(census$ZIP_P_Black[census$ZIP_P_Black>0])-.0001
   h <- min(census$ZIP_P_Asian[census$ZIP_P_Asian>0])-.0001
   i <- min(census$ZIP_P_Hispanic[census$ZIP_P_Hispanic>0])-.0001
-  census %>%
-  mutate( 
-    pd.log = log(ifelse(ZIP_Pop_Density==0,a,ZIP_Pop_Density)),
-    pBl.log = log(ifelse(ZIP_P_Black==0,g,ZIP_P_Black)),
-    pAn.log = log(ifelse(ZIP_P_Asian==0,h,ZIP_P_Asian)),
-    pHL.log = log(ifelse(ZIP_P_Hispanic==0,i,ZIP_P_Hispanic))
-    ) -> census
+  census %>%mutate( pd.log = log(ifelse(ZIP_Pop_Density==0,a,ZIP_Pop_Density)),pBl.log = log(ifelse(ZIP_P_Black==0,g,ZIP_P_Black)),pAn.log = log(ifelse(ZIP_P_Asian==0,h,ZIP_P_Asian)),pHL.log = log(ifelse(ZIP_P_Hispanic==0,i,ZIP_P_Hispanic))) -> census
   ''')
 
   # Normalize data
@@ -343,13 +365,12 @@ def calculateExistingR(itemKey):
   sccensus %>%
       dist() %>%
       hclust() -> census.hclust
-  fviz_dend(census.hclust, k = 16, rect = TRUE, rect_fill = TRUE, lwd = 0.5, cex = 0.5) # pop_dens, med_age, %s, med_inc)
   ''')
 
   # Hierarchical cuts
   r('''
   R16 <- ef %>%
-  mutate(cluster = cutree(census.hclust,16))
+  dplyr::mutate(cluster = cutree(census.hclust,16))
   ''')
 
   # To be replaced with user input
@@ -357,7 +378,7 @@ def calculateExistingR(itemKey):
 
   # Get customers that sell the specific product
   r('''
-  Customer_Product <- readxl::read_xlsx("combined_data.xlsx", sheet = "Customer-Product")
+  Customer_Product <- readxl::read_xlsx("/var/www/FlaskApp/api/ExcelFiles/uploadData.xlsx", sheet = "Customer-Product")
 
   soldItem <- subset(Customer_Product, ItemKey == itemkey)
   ''')
@@ -375,12 +396,12 @@ def calculateExistingR(itemKey):
 
   # Get zip of customers
   r('''
-  customers <- readxl::read_xlsx("combined_data.xlsx", sheet = "Customer")
+  customers <- readxl::read_xlsx("/var/www/FlaskApp/api/ExcelFiles/uploadData.xlsx", sheet = "Customer")
 
   i = 1
   zipList <- character()
   for(ID in cusList) {
-    emp <- subset(customers, CusKey == cusList[i])
+    temp <- subset(customers, CusKey == cusList[i])
     zipList <- c(zipList, as.character(temp[1, "ShipZip"]))
     i = i + 1
   }
@@ -446,8 +467,9 @@ def calculateExistingR(itemKey):
   }
   ''')
 
+
   # Order data frame by net revenue
   r('''
   oldPrediction <- oldPrediction[order(-oldPrediction$NetRevenue),]
-  openxlsx::write.xlsx(oldPrediction, "ExistingProductRecommendation.xlsx", sheetName = "Existing Product Recommendations")
+  write_xlsx(list( ExistingProductRecommendation = oldPrediction), "/var/www/FlaskApp/api/ExcelFiles/ExistingProductRecommendation.xlsx")
   ''')
